@@ -1,5 +1,4 @@
 import React from 'react';
-import Navbar from '../../components/layout/Navbar/Navbar';
 import HeroSection from '../../components/Hero/Hero';
 import TrendingSection from '../../sections/TrendingSection/TrendingSection';
 import CategorySection from '../../sections/CategorySection/CategorySection';
@@ -25,7 +24,6 @@ const Home = () => {
 
   return (
     <div className="app-shell">
-      <Navbar />
       <main>
         <HeroSection />
         <TrendingSection
