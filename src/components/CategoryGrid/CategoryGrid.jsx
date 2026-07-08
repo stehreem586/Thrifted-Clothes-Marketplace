@@ -2,11 +2,15 @@ import React from 'react';
 import CategoryCard from '../CategoryCard/CategoryCard';
 import './CategoryGrid.css';
 
-const CategoryGrid = ({ categories }) => {
+const CategoryGrid = ({ categories, onCategoryClick }) => {
   return (
     <div className="category-grid">
-      {categories.map(category => (
-        <CategoryCard key={category.id} category={category} />
+      {categories.map((category) => (
+        <CategoryCard
+          key={category.id}
+          category={category}
+          onClick={() => onCategoryClick?.(category)}
+        />
       ))}
     </div>
   );

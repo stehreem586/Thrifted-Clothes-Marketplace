@@ -1,16 +1,14 @@
 import React from 'react';
 import './SectionHeading.css';
 
-const SectionHeading = ({ title, linkText, linkUrl = '#' }) => {
+const SectionHeading = ({ title, linkText, onLinkClick }) => {
   return (
     <div className="section-heading-container">
-      <h2 className="section-title">
-        {title} <span className="title-star">✦</span>
-      </h2>
+      <h2 className="section-title">{title}</h2>
       {linkText && (
-        <a href={linkUrl} className="section-link">
+        <button type="button" className="section-link" onClick={onLinkClick}>
           {linkText} <span className="arrow">→</span>
-        </a>
+        </button>
       )}
     </div>
   );
