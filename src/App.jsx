@@ -1,32 +1,26 @@
 import React from 'react';
-import { products } from './data/products';
-import { categories } from './data/categories';
-import SectionHeading from './components/SectionHeading/SectionHeading';
-import ProductGrid from './components/ProductGrid/ProductGrid';
-import CategoryGrid from './components/CategoryGrid/CategoryGrid';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Navbar from './components/layout/Navbar/Navbar';
+import Footer from './components/layout/Footer/Footer';
+import Home from './pages/Home/Home';
+import Login from './pages/Login/Login';
 import './App.css';
 
 function App() {
   return (
-    <div className="app-container">
-      <section className="app-section">
-        <SectionHeading title="Trending Now" linkText="View All" />
-        <ProductGrid products={products} />
-      </section>
-
-      <section className="app-section">
-        <SectionHeading title="Shop by Category" linkText="Browse All Categories" />
-        <CategoryGrid categories={categories} />
-      </section>
-    </div>
+    <Router>
+      <div className="app-wrapper" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+        <Navbar />
+        <main style={{ flex: 1 }}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<Login />} />
+          </Routes>
+        </main>
+        <Footer />
+      </div>
+    </Router>
   );
-}
-
-export default App;
-import Admin from "./Admin";
-
-function App() {
-  return <Admin />;
 }
 
 export default App;
