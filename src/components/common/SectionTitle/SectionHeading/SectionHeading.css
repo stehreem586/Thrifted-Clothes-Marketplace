@@ -22,10 +22,14 @@
 }
 
 .section-link {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
   font-family: 'Inter', sans-serif;
   font-size: 14px;
   font-weight: 500;
-  color: #8c6a46;
+  color: #c19358;
   text-decoration: none;
   display: flex;
   align-items: center;
@@ -34,7 +38,7 @@
 }
 
 .section-link:hover {
-  color: #6b4d30;
+  color: #8c6a46;
 }
 
 .arrow {

@@ -1,7 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import './Footer.css';
-import logo from '../../../assets/images/logo/logo.png';
+import logo from '../../../assets/images/footer-logo.png';
+import playIcon from '../../../assets/icons/Google-play-icon.avif';
+import appleIcon from '../../../assets/icons/apple-icon.jpg';
 
 const Footer = () => {
   return (
@@ -11,10 +13,10 @@ const Footer = () => {
         {/* Brand Section */}
         <div className="footer-brand">
           <Link to="/" className="footer-logo">
-            <img src={logo} alt="SecondLife Logo" />
-            <div className="logo-text">
-              <span className="brand-name">SecondLife</span>
-              <span className="brand-tagline">REUSE. RESTYLE. RELIVE.</span>
+            <img src={logo} alt="SecondLife Logo" className="footer-logo-img" />
+            <div className="footer-logo-text">
+              <span className="footer-brand-name">SecondLife</span>
+              <span className="footer-brand-tagline">REUSE. RESTYLE. RELIVE.</span>
             </div>
           </Link>
           <p className="brand-description">
@@ -74,28 +76,20 @@ const Footer = () => {
         <div className="footer-app">
           <h4>Download the App</h4>
           <div className="app-buttons">
-            <button className="app-btn">
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M5 2.5v19l11-9.5-11-9.5z" fill="#00e676" />
-                <path d="M5 2.5l11 9.5 4.5-3.5L5 2.5z" fill="#f44336" />
-                <path d="M5 21.5l11-9.5 4.5 3.5L5 21.5z" fill="#ffeb3b" />
-                <path d="M16 12l4.5-3.5 1.5 1.5-6 6L16 12z" fill="#2196f3" />
-              </svg>
-              <div className="app-btn-text">
-                <span className="small-text">GET IT ON</span>
-                <span className="big-text">Google Play</span>
-              </div>
-            </button>
-            
-            <button className="app-btn">
-              <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M16.5 14.5c0-2.5 2-3.7 2.1-3.7-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.1-3 1-3.8 1-.8 0-2-1-3.2-1-1.6 0-3 1-3.8 2.5-1.7 3-2.1 7.2-.5 9.8.7 1 1.5 2.2 2.7 2.1 1.1-.1 1.6-.8 2.9-.8 1.3 0 1.7.8 2.9.8 1.2.1 1.9-1 2.6-2.1.9-1.3 1.2-2.5 1.3-2.6-.1 0-2.6-1-2.6-4.1zM14 6.5c.6-.8 1-1.9.9-2.9-1 .1-2.2.6-2.9 1.4-.6.7-1 1.8-.9 2.8 1.1 0 2.2-.6 2.9-1.3z" />
-              </svg>
-              <div className="app-btn-text">
-                <span className="small-text">Download on the</span>
-                <span className="big-text">App Store</span>
-              </div>
-            </button>
+            <a href="#" className="app-download-link">
+              <img src={playIcon} alt="Google Play icon" className="app-download-icon" />
+              <span className="app-download-text">
+                <span className="app-download-small">GET IT ON</span>
+                <span className="app-download-main">Google Play</span>
+              </span>
+            </a>
+            <a href="#" className="app-download-link">
+              <img src={appleIcon} alt="App Store icon" className="app-download-icon" />
+              <span className="app-download-text">
+                <span className="app-download-small">Download on the</span>
+                <span className="app-download-main">App Store</span>
+              </span>
+            </a>
           </div>
         </div>
 
