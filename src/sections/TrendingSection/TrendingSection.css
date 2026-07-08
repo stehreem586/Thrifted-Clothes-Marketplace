@@ -1,5 +1,16 @@
-﻿.trending-section {
+.trending-section {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  max-width: 1360px;
+  width: calc(100% - 48px);
+  margin: 64px auto;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .trending-section {
+    width: calc(100% - 32px);
+    margin: 40px auto;
+  }
 }

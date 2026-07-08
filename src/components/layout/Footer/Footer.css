@@ -18,36 +18,40 @@
 
 /* Brand Section */
 .footer-brand {
-  flex: 1;
+  flex: 1.2;
   min-width: 250px;
-  max-width: 300px;
+  max-width: 350px;
 }
 
 .footer-logo {
   display: flex;
   align-items: center;
-  gap: 12px;
   text-decoration: none;
   margin-bottom: 24px;
+  gap: 12px;
 }
 
-.footer-logo img {
-  height: 48px;
+.footer-logo-img {
+  height: 100px;
+  transform: scale(4); /* Compensate for image transparent padding */
+  margin-left: 16px;
+  margin-right: 16px;
+  object-fit: contain;
 }
 
-.footer-logo .logo-text {
+.footer-logo-text {
   display: flex;
   flex-direction: column;
 }
 
-.footer-logo .brand-name {
+.footer-brand-name {
   color: #fff;
   font-family: 'Playfair Display', serif;
   font-size: 26px;
   line-height: 1;
 }
 
-.footer-logo .brand-tagline {
+.footer-brand-tagline {
   color: #d8a25c;
   font-size: 8px;
   letter-spacing: 1.5px;
@@ -123,48 +127,67 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  align-items: center;
 }
 
-.app-btn {
-  background-color: #000;
-  border: 1px solid #333;
-  border-radius: 6px;
-  color: #fff;
+.app-download-link {
   display: flex;
   align-items: center;
-  padding: 8px 16px;
-  gap: 12px;
-  cursor: pointer;
-  transition: border-color 0.2s ease;
-  width: 180px;
-  text-align: left;
+  justify-content: flex-start;
+  width: 240px;
+  min-height: 64px;
+  padding: 14px 18px;
+  gap: 14px;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background-color: rgba(255, 255, 255, 0.05);
+  text-decoration: none;
 }
 
-.app-btn:hover {
-  border-color: #d8a25c;
+.app-download-link:hover {
+  transform: translateY(-2px);
+  opacity: 0.95;
 }
 
-.app-btn svg {
-  width: 24px;
-  height: 24px;
+.app-download-link,
+.app-download-link * {
+  text-decoration: none;
 }
 
-.app-btn-text {
+.app-download-icon {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.app-download-text {
   display: flex;
   flex-direction: column;
+  color: #fff;
+  line-height: 1.1;
 }
 
-.app-btn-text .small-text {
-  font-size: 9px;
+.app-download-small {
+  font-size: 10px;
+  letter-spacing: 1px;
   text-transform: uppercase;
-  line-height: 1;
-  color: #a0a0a0;
+  opacity: 0.75;
 }
 
-.app-btn-text .big-text {
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1.2;
+.app-download-main {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.google-play-icon svg {
+  border-radius: 8px;
+}
+
+.app-store-icon svg {
+  border-radius: 8px;
 }
 
 /* Bottom */

@@ -2,6 +2,9 @@ import React from 'react';
 import HeroSection from '../../components/Hero/Hero';
 import TrendingSection from '../../sections/TrendingSection/TrendingSection';
 import CategorySection from '../../sections/CategorySection/CategorySection';
+import WhyChooseUs from '../../sections/WhyChooseUs/WhyChooseUs';
+import Testimonials from '../../sections/Testimonials/Testimonials';
+import NewsletterSection from '../../sections/NewsletterSection/NewsletterSection';
 import { products } from '../../data/products';
 import { categories } from '../../data/categories';
 
@@ -36,6 +39,9 @@ const Home = () => {
           onCategoryClick={handleCategoryClick}
           onBrowseAll={handleBrowseAll}
         />
+        <WhyChooseUs />
+        <Testimonials />
+        <NewsletterSection />
       </main>
     </div>
   );
