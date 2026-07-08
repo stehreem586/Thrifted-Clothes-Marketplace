@@ -23,3 +23,10 @@ function App() {
 }
 
 export default App;
+import Admin from "./Admin";
+
+function App() {
+  return <Admin />;
+}
+
+export default App;
