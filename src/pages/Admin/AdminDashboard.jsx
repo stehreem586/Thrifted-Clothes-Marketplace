@@ -1,232 +1,238 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { DollarSign, Users, Store, TrendingUp, TrendingDown, Layers, FileText } from 'lucide-react';
 import './AdminDashboard.css';
 
-function AdminDashboard({ dashboardSearch, setDashboardSearch }) {
+/* ── Mock data ── */
+const recentTransactions = [
+  {
+    id: 1,
+    product: '90s Oversized Trench',
+    img: 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&w=150&h=150&q=80',
+    seller: '@urban_vintage',
+    amount: '$245.00',
+    status: 'COMPLETED',
+    time: '2 mins ago',
+  },
+  {
+    id: 2,
+    product: 'Designer Leather Boots',
+    img: 'https://images.unsplash.com/photo-1520639888713-7851133b1ed0?auto=format&fit=crop&w=150&h=150&q=80',
+    seller: '@luxe_resale',
+    amount: '$510.00',
+    status: 'PENDING',
+    time: '15 mins ago',
+  },
+  {
+    id: 3,
+    product: 'Vintage Levi Denim Jacket',
+    img: 'https://images.unsplash.com/photo-1576995853123-5a10305d93c0?auto=format&fit=crop&w=150&h=150&q=80',
+    seller: '@denim_hub',
+    amount: '$89.00',
+    status: 'COMPLETED',
+    time: '38 mins ago',
+  },
+  {
+    id: 4,
+    product: 'Silk Evening Blouse',
+    img: 'https://images.unsplash.com/photo-1485462537746-965f33f7f6a7?auto=format&fit=crop&w=150&h=150&q=80',
+    seller: '@silk_stories',
+    amount: '$175.00',
+    status: 'REFUNDED',
+    time: '1 hr ago',
+  },
+];
+
+const topCategories = [
+  { name: 'Vintage', pct: 42, color: '#1a1a2e', width: '82%' },
+  { name: 'Streetwear', pct: 38, color: '#374151', width: '72%' },
+  { name: 'Designer', pct: 27, color: '#6b7280', width: '52%' },
+  { name: 'Art', pct: 15, color: '#d1d5db', width: '28%' },
+];
+
+/* Simple SVG line chart */
+function MiniChart() {
+  const gmvPoints = [5000, 12000, 9000, 18000, 14000, 22000, 28000, 25000, 32000];
+  const signupPoints = [8000, 10000, 11500, 10000, 12000, 14000, 13000, 15000, 17000];
+  const w = 420, h = 140;
+  const maxV = 35000;
+  const xs = gmvPoints.map((_, i) => (i / (gmvPoints.length - 1)) * w);
+  const toY = v => h - (v / maxV) * h;
+  const polyline = pts => xs.map((x, i) => `${x},${toY(pts[i])}`).join(' ');
+
   return (
-    <div className="view-content fade-in">
-      <div className="view-heading">
+    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ width: '100%', height: 140 }}>
+      <polyline
+        points={polyline(gmvPoints)}
+        fill="none"
+        stroke="#1a1a2e"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <polyline
+        points={polyline(signupPoints)}
+        fill="none"
+        stroke="#9ca3af"
+        strokeWidth="2"
+        strokeDasharray="6 3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export default function AdminDashboard() {
+  const [period, setPeriod] = useState('Last 30 Days');
+
+  return (
+    <div className="dash-root">
+      {/* Header */}
+      <div className="dash-header">
         <div>
-          <h1>Performance Overview</h1>
-          <p className="view-sub">Explore the data from SecondLife Marketplace.</p>
+          <h1 className="dash-title">Overview</h1>
+          <p className="dash-sub">Real-time performance metrics for SecondLife.</p>
         </div>
-        <button className="secondary-action-btn calendar-btn">Today</button>
-      </div>
-
-      {/* Performance Stats Cards */}
-      <div className="stats-grid">
-        <div className="stat-card">
-          <span className="stat-label">Total Sales</span>
-          <div className="stat-value-container">
-            <h2>21,201</h2>
-            <span className="stat-trend positive">↑ 12.5%</span>
-          </div>
-        </div>
-        <div className="stat-card">
-          <span className="stat-label">Total Listings</span>
-          <div className="stat-value-container">
-            <h2>108,350</h2>
-            <span className="stat-trend positive">↑ 8.2%</span>
-          </div>
-        </div>
-        <div className="stat-card">
-          <span className="stat-label">Sales Count</span>
-          <div className="stat-value-container">
-            <h2>2,861</h2>
-            <span className="stat-trend positive">↑ 4.8%</span>
-          </div>
-        </div>
-        <div className="stat-card">
-          <span className="stat-label">Revenue</span>
-          <div className="stat-value-container">
-            <h2>PKR 991,296</h2>
-            <span className="stat-trend positive">↑ 15.3%</span>
-          </div>
+        <div className="dash-header-actions">
+          <button
+            className={`period-btn ${period === 'Last 30 Days' ? 'active' : ''}`}
+            onClick={() => setPeriod('Last 30 Days')}
+          >
+            Last 30 Days
+          </button>
+          <button className="export-btn"><FileText size={14} style={{ marginRight: '6px' }} /> Export Report</button>
         </div>
       </div>
 
-      {/* Chart and categories grid */}
-      <div className="dashboard-charts-grid">
-        <div className="dashboard-chart-card">
-          <h3>Signups Over Time</h3>
-          <div className="mock-chart">
-            <svg viewBox="0 0 600 250" className="chart-svg">
-              {/* Grid lines */}
-              <line x1="40" y1="200" x2="560" y2="200" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 4" />
-              <line x1="40" y1="150" x2="560" y2="150" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 4" />
-              <line x1="40" y1="100" x2="560" y2="100" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 4" />
-              <line x1="40" y1="50" x2="560" y2="50" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 4" />
-
-              {/* Y Axis Labels */}
-              <text x="30" y="204" fontSize="10" fontWeight="600" fill="#94a3b8" textAnchor="end">0</text>
-              <text x="30" y="154" fontSize="10" fontWeight="600" fill="#94a3b8" textAnchor="end">100</text>
-              <text x="30" y="104" fontSize="10" fontWeight="600" fill="#94a3b8" textAnchor="end">200</text>
-              <text x="30" y="54" fontSize="10" fontWeight="600" fill="#94a3b8" textAnchor="end">300</text>
-
-              {/* Area Fill */}
-              <path
-                d="M 60,200 L 60,170 L 140,130 L 220,150 L 300,80 L 380,100 L 460,50 L 540,30 L 540,200 Z"
-                fill="rgba(193, 147, 88, 0.08)"
-                stroke="none"
-              />
-
-              {/* Line Path */}
-              <path
-                d="M 60,170 L 140,130 L 220,150 L 300,80 L 380,100 L 460,50 L 540,30"
-                fill="none"
-                stroke="#111111"
-                strokeWidth="4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-
-              {/* Dots on Data Points */}
-              <circle cx="60" cy="170" r="5" fill="#111111" stroke="#ffffff" strokeWidth="2" />
-              <circle cx="140" cy="130" r="5" fill="#111111" stroke="#ffffff" strokeWidth="2" />
-              <circle cx="220" cy="150" r="5" fill="#111111" stroke="#ffffff" strokeWidth="2" />
-              <circle cx="300" cy="80" r="5" fill="#111111" stroke="#ffffff" strokeWidth="2" />
-              <circle cx="380" cy="100" r="5" fill="#111111" stroke="#ffffff" strokeWidth="2" />
-              <circle cx="460" cy="50" r="5" fill="#111111" stroke="#ffffff" strokeWidth="2" />
-              <circle cx="540" cy="30" r="5" fill="#111111" stroke="#ffffff" strokeWidth="2" />
-
-              {/* Values above data points */}
-              <text x="60" y="154" fontSize="10.5" fontWeight="700" fill="#111111" textAnchor="middle">42</text>
-              <text x="140" y="114" fontSize="10.5" fontWeight="700" fill="#111111" textAnchor="middle">78</text>
-              <text x="220" y="134" fontSize="10.5" fontWeight="700" fill="#111111" textAnchor="middle">60</text>
-              <text x="300" y="64" fontSize="10.5" fontWeight="700" fill="#111111" textAnchor="middle">145</text>
-              <text x="380" y="84" fontSize="10.5" fontWeight="700" fill="#111111" textAnchor="middle">120</text>
-              <text x="460" y="34" fontSize="10.5" fontWeight="700" fill="#111111" textAnchor="middle">190</text>
-              <text x="540" y="14" fontSize="10.5" fontWeight="700" fill="#111111" textAnchor="middle">220</text>
-
-              {/* X Axis Labels */}
-              <text x="60" y="222" fontSize="12" fontWeight="600" fill="#64748b" textAnchor="middle">Mon</text>
-              <text x="140" y="222" fontSize="12" fontWeight="600" fill="#64748b" textAnchor="middle">Tue</text>
-              <text x="220" y="222" fontSize="12" fontWeight="600" fill="#64748b" textAnchor="middle">Wed</text>
-              <text x="300" y="222" fontSize="12" fontWeight="600" fill="#64748b" textAnchor="middle">Thu</text>
-              <text x="380" y="222" fontSize="12" fontWeight="600" fill="#64748b" textAnchor="middle">Fri</text>
-              <text x="460" y="222" fontSize="12" fontWeight="600" fill="#64748b" textAnchor="middle">Sat</text>
-              <text x="540" y="222" fontSize="12" fontWeight="600" fill="#64748b" textAnchor="middle">Sun</text>
-            </svg>
+      {/* Stat cards */}
+      <div className="dash-stats-row">
+        <div className="stat-card yellow">
+          <div className="stat-icon-wrapper"><DollarSign size={20} color="#b45309" /></div>
+          <div className="stat-body">
+            <p className="stat-label">GROSS MERCHANDISE VALUE</p>
+            <p className="stat-value">$142,590.00</p>
           </div>
+          <span className="stat-badge up"><TrendingUp size={11} /> 12.4%</span>
         </div>
-
-        <div className="dashboard-categories-card">
-          <h3>Categories</h3>
-          <div className="categories-list">
-            <div className="category-progress-item">
-              <div className="progress-details">
-                <span>Vintage Streetwear</span>
-                <strong>40%</strong>
-              </div>
-              <div className="progress-bar-bg">
-                <div className="progress-bar-fill orange" style={{ width: '40%' }}></div>
-              </div>
-            </div>
-            <div className="category-progress-item">
-              <div className="progress-details">
-                <span>Oversize Wear</span>
-                <strong>23%</strong>
-              </div>
-              <div className="progress-bar-bg">
-                <div className="progress-bar-fill black" style={{ width: '23%' }}></div>
-              </div>
-            </div>
-            <div className="category-progress-item">
-              <div className="progress-details">
-                <span>Bottoms</span>
-                <strong>21%</strong>
-              </div>
-              <div className="progress-bar-bg">
-                <div className="progress-bar-fill gray" style={{ width: '21%' }}></div>
-              </div>
-            </div>
-            <div className="category-progress-item">
-              <div className="progress-details">
-                <span>Accessories</span>
-                <strong>16%</strong>
-              </div>
-              <div className="progress-bar-bg">
-                <div className="progress-bar-fill light-gray" style={{ width: '16%' }}></div>
-              </div>
-            </div>
+        <div className="stat-card blue">
+          <div className="stat-icon-wrapper"><Users size={20} color="#1d4ed8" /></div>
+          <div className="stat-body">
+            <p className="stat-label">TOTAL USERS</p>
+            <p className="stat-value">24,812</p>
+          </div>
+          <span className="stat-badge up"><TrendingUp size={11} /> 8.1%</span>
+        </div>
+        <div className="stat-card green">
+          <div className="stat-icon-wrapper"><Store size={20} color="#047857" /></div>
+          <div className="stat-body">
+            <p className="stat-label">ACTIVE SELLERS</p>
+            <p className="stat-value">3,405</p>
+          </div>
+          <span className="stat-badge neutral">— 0.0%</span>
+        </div>
+        <div className="stat-card snapshot">
+          <p className="stat-label">LISTINGS SNAPSHOT</p>
+          <div className="snapshot-row">
+            <span className="snap-label">Active</span>
+            <span className="snap-val">12,402</span>
+          </div>
+          <div className="snapshot-bar-outer">
+            <div className="snapshot-bar-inner" style={{ width: '75%' }}></div>
+          </div>
+          <div className="snapshot-row">
+            <span className="snap-label">Sold</span>
+            <span className="snap-val">8,190</span>
+          </div>
+          <div className="snapshot-bar-outer">
+            <div className="snapshot-bar-inner gold" style={{ width: '52%' }}></div>
           </div>
         </div>
       </div>
 
-      {/* Recent Sales Table */}
-      <div className="recent-sales-card">
-        <div className="card-header-row">
-          <h3>Recent Sales</h3>
-          <a href="#view-all" className="card-link">View All Transactions</a>
+      {/* Chart + Top Categories */}
+      <div className="dash-middle-row">
+        <div className="chart-card">
+          <div className="chart-header">
+            <p className="chart-title">GMV &amp; Signups Over Time</p>
+            <div className="chart-legend">
+              <span className="leg-dot dark"></span><span>GMV</span>
+              <span className="leg-dot gray"></span><span>Signups</span>
+            </div>
+          </div>
+          <div className="chart-area">
+            <MiniChart />
+          </div>
+          <div className="chart-weeks">
+            {['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5', 'Week 6'].map(w => (
+              <span key={w}>{w}</span>
+            ))}
+          </div>
+          <div className="chart-insights">
+            {topCategories.slice(0, 2).map(c => (
+              <span key={c.name} className="insight-chip">
+                🏷️ {c.name} {c.pct}%
+              </span>
+            ))}
+          </div>
         </div>
-        <div className="table-responsive">
-          <table className="seller-table aligned-middle">
-            <thead>
-              <tr>
-                <th style={{ width: '45%' }}>Product</th>
-                <th>Customer</th>
-                <th>Date</th>
-                <th>Status</th>
-                <th>Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>
-                  <div className="product-cell">
-                    <div className="product-thumbnail">
-                      <img src="https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=100&q=80" alt="Vintage Old Money Olive Shirt" />
-                    </div>
-                    <div className="product-details">
-                      <span className="product-title">Vintage Old Money Olive Shirt</span>
-                      <span className="product-subtitle">Size L • Olive Green</span>
-                    </div>
-                  </div>
-                </td>
-                <td>Muhammad Tahir</td>
-                <td>Oct 12</td>
-                <td><span className="status-pill complete">Completed</span></td>
-                <td>PKR 4,200</td>
-              </tr>
-              <tr>
-                <td>
-                  <div className="product-cell">
-                    <div className="product-thumbnail">
-                      <img src="https://images.unsplash.com/photo-1549298916-b41d501d3772?w=100&q=80" alt="Common Projects Achilles" />
-                    </div>
-                    <div className="product-details">
-                      <span className="product-title">Common Projects Achilles</span>
-                      <span className="product-subtitle">Size 42 • White</span>
-                    </div>
-                  </div>
-                </td>
-                <td>Sara Pathan</td>
-                <td>Oct 7</td>
-                <td><span className="status-pill pending-status">Pending</span></td>
-                <td>PKR 5,600</td>
-              </tr>
-              <tr>
-                <td>
-                  <div className="product-cell">
-                    <div className="product-thumbnail">
-                      <img src="https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=100&q=80" alt="Loop Home Cashmere" />
-                    </div>
-                    <div className="product-details">
-                      <span className="product-title">Loop Home Cashmere</span>
-                      <span className="product-subtitle">Size S • Charcoal</span>
-                    </div>
-                  </div>
-                </td>
-                <td>Farhan Ali</td>
-                <td>Oct 4</td>
-                <td><span className="status-pill complete">Completed</span></td>
-                <td>PKR 1,900</td>
-              </tr>
-            </tbody>
-          </table>
+
+        <div className="top-categories-card">
+          <p className="chart-title">Top Categories</p>
+          <div className="cat-list">
+            {topCategories.map(cat => (
+              <div key={cat.name} className="cat-row">
+                <span className="cat-name">{cat.name}</span>
+                <div className="cat-bar-outer">
+                  <div
+                    className="cat-bar-inner"
+                    style={{ width: cat.width, background: cat.color }}
+                  ></div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
+      </div>
+
+      {/* Recent Transactions */}
+      <div className="transactions-card">
+        <div className="tx-header">
+          <p className="chart-title">Recent Transactions</p>
+          <button className="view-all-btn">View All</button>
+        </div>
+        <table className="tx-table">
+          <thead>
+            <tr>
+              <th>PRODUCT</th>
+              <th>SELLER</th>
+              <th>AMOUNT</th>
+              <th>STATUS</th>
+              <th>DATE</th>
+            </tr>
+          </thead>
+          <tbody>
+            {recentTransactions.map(tx => (
+              <tr key={tx.id}>
+                <td>
+                  <div className="tx-product">
+                    <img src={tx.img} alt={tx.product} className="tx-product-img" />
+                    <span>{tx.product}</span>
+                  </div>
+                </td>
+                <td className="tx-seller">{tx.seller}</td>
+                <td className="tx-amount">{tx.amount}</td>
+                <td>
+                  <span className={`tx-status ${tx.status.toLowerCase()}`}>
+                    {tx.status}
+                  </span>
+                </td>
+                <td className="tx-time">{tx.time}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
 }
 
-export default AdminDashboard;
