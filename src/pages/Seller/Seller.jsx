@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import './Admin.css';
-import AdminDashboard from './AdminDashboard';
+import './Seller.css';
+import SellerDashboard from './SellerDashboard';
 import Inventory from './Inventory';
 import OrderHistory from './OrderHistory';
 
-function Admin() {
+function Seller() {
   const [activeTab, setActiveTab] = useState('inventory');
 
   // Search states (passed down to sub-views)
@@ -34,7 +34,7 @@ function Admin() {
             <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&q=80" alt="Seller Avatar" />
           </div>
           <div className="profile-info">
-            <h4>Admin Panel</h4>
+            <h4>Seller Panel</h4>
             <span className="manage-badge">Manage Brand store</span>
           </div>
         </div>
@@ -54,13 +54,13 @@ function Admin() {
             { key: 'sales', label: 'Sales', icon: (
               <><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></>
             )},
-            { key: 'messages', label: 'Messages', icon: (
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            )},
-            { key: 'community', label: 'Community', icon: (
-              <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>
-            )},
+            // { key: 'messages', label: 'Messages', icon: (
+            //   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            // )},
+            // { key: 'community', label: 'Community', icon: (
+            //   <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+            //     <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>
+            // )},
           ].map(({ key, label, icon }) => (
             <button
               key={key}
@@ -75,9 +75,9 @@ function Admin() {
           ))}
         </nav>
 
-        <button className="sidebar-action-btn" onClick={() => switchTab('inventory')}>
+        {/* <button className="sidebar-action-btn" onClick={() => switchTab('inventory')}>
           Create Listing
-        </button>
+        </button> */}
 
         <div className="seller-sidebar-footer">
           <button className="footer-nav-item">
@@ -154,7 +154,7 @@ function Admin() {
 
         {/* ── Views ── */}
         {activeTab === 'dashboard' && (
-          <AdminDashboard dashboardSearch={dashboardSearch} setDashboardSearch={setDashboardSearch} />
+          <SellerDashboard dashboardSearch={dashboardSearch} setDashboardSearch={setDashboardSearch} />
         )}
 
         {activeTab === 'inventory' && (
@@ -182,4 +182,4 @@ function Admin() {
   );
 }
 
-export default Admin;
+export default Seller;
