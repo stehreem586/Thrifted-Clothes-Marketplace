@@ -1,0 +1,105 @@
+.mh-hero {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px 24px 0 24px;
+  box-sizing: border-box;
+}
+
+.mh-hero-card {
+  width: 100%;
+  height: 480px;
+  border-radius: 16px;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.mh-hero-overlay {
+  width: 40%;
+  height: 100%;
+  background-color: rgba(144, 142, 137, 0.88); /* Translucent gray matching image */
+  display: flex;
+  align-items: center;
+  padding: 48px;
+  box-sizing: border-box;
+}
+
+.mh-hero-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 420px;
+}
+
+.mh-hero-title {
+  font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
+  font-size: 38px;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.2;
+  letter-spacing: -0.5px;
+  margin: 0;
+}
+
+.mh-hero-subtitle {
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.mh-hero-button {
+  background-color: #ffffff;
+  color: #111111;
+  border: none;
+  padding: 14px 32px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  width: fit-content;
+  transition: all 0.2s ease;
+}
+
+.mh-hero-button:hover {
+  background-color: #f2f2f7;
+  transform: translateY(-1px);
+}
+
+.mh-hero-button:active {
+  transform: translateY(0);
+}
+
+/* Responsive styles */
+@media (max-width: 992px) {
+  .mh-hero-overlay {
+    width: 50%;
+    padding: 36px;
+  }
+  .mh-hero-title {
+    font-size: 32px;
+  }
+  .mh-hero-card {
+    height: 420px;
+  }
+}
+
+@media (max-width: 768px) {
+  .mh-hero-card {
+    background-position: 70% center; /* Adjust image positioning */
+  }
+  .mh-hero-overlay {
+    width: 100%;
+    background-color: rgba(144, 142, 137, 0.93); /* Darken for visibility on full card overlay */
+    padding: 32px;
+  }
+  .mh-hero-content {
+    max-width: 100%;
+  }
+}

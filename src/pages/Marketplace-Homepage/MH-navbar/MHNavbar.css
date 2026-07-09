@@ -1,0 +1,286 @@
+.mh-navbar {
+  width: 100%;
+  background-color: #ffffff;
+  border-bottom: 1px solid #f2f2f7;
+  font-family: 'Inter', -apple-system, sans-serif;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-sizing: border-box;
+}
+
+.mh-navbar-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+/* Brand logo */
+.mh-navbar-brand {
+  flex-shrink: 0;
+}
+
+.mh-brand-logo {
+  font-size: 24px;
+  font-weight: 700;
+  color: #000000;
+  text-decoration: none;
+  letter-spacing: -0.5px;
+}
+
+/* Search and Location Selector wrapper */
+.mh-search-wrapper {
+  flex: 1;
+  max-width: 480px;
+}
+
+.mh-search-container {
+  display: flex;
+  align-items: center;
+  background-color: #f2f2f7;
+  border: 1px solid #e5e5ea;
+  border-radius: 8px;
+  padding: 8px 14px;
+  gap: 10px;
+}
+
+.mh-search-icon {
+  color: #8e8e93;
+  flex-shrink: 0;
+}
+
+.mh-search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  color: #1c1c1e;
+  outline: none;
+  width: 100%;
+}
+
+.mh-search-input::placeholder {
+  color: #8e8e93;
+}
+
+.mh-search-divider {
+  width: 1px;
+  height: 20px;
+  background-color: #d1d1d6;
+  flex-shrink: 0;
+}
+
+.mh-location-picker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.mh-location-icon {
+  color: #8e8e93;
+}
+
+.mh-location-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1c1c1e;
+}
+
+.mh-chevron-icon {
+  color: #8e8e93;
+}
+
+/* Nav links and Actions */
+.mh-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.mh-nav-links {
+  display: flex;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: 24px;
+  align-items: center;
+}
+
+.mh-nav-item {
+  position: relative;
+  padding: 8px 0;
+}
+
+.mh-nav-item a {
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 500;
+  color: #8e8e93;
+  transition: color 0.2s ease;
+}
+
+.mh-nav-item a:hover {
+  color: #1c1c1e;
+}
+
+.mh-nav-item.active a {
+  color: #1c1c1e;
+  font-weight: 600;
+}
+
+/* Indicator line exactly as in screenshot */
+.mh-active-indicator {
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  right: 0;
+  height: 2.5px;
+  background-color: #000000;
+  border-radius: 2px;
+}
+
+/* Icons Group */
+.mh-icons-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.mh-icon-btn {
+  background: none;
+  border: none;
+  padding: 6px;
+  color: #1c1c1e;
+  cursor: pointer;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+}
+
+.mh-icon-btn:hover {
+  background-color: #f2f2f7;
+}
+
+/* Profile container & dropdown */
+.mh-profile-container {
+  position: relative;
+}
+
+.mh-profile-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 12px;
+  background-color: #ffffff;
+  border: 1px solid #e5e5ea;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+  width: 220px;
+  padding: 8px;
+  z-index: 1010;
+}
+
+.mh-dropdown-header {
+  padding: 12px;
+}
+
+.mh-user-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1c1c1e;
+  margin: 0 0 2px 0;
+}
+
+.mh-user-email {
+  font-size: 12px;
+  color: #8e8e93;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mh-dropdown-divider {
+  height: 1px;
+  background-color: #f2f2f7;
+  margin: 6px 0;
+}
+
+.mh-dropdown-item {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1c1c1e;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.mh-dropdown-item:hover {
+  background-color: #f2f2f7;
+}
+
+.mh-dropdown-item.logout-btn {
+  color: #ff3b30;
+}
+
+.mh-dropdown-item.logout-btn:hover {
+  background-color: #ffeaea;
+}
+
+/* Actions separator line */
+.mh-actions-divider {
+  width: 1px;
+  height: 24px;
+  background-color: #d1d1d6;
+}
+
+/* Sell button */
+.mh-sell-btn {
+  background-color: #000000;
+  color: #ffffff;
+  border: none;
+  padding: 10px 22px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+  white-space: nowrap;
+}
+
+.mh-sell-btn:hover {
+  opacity: 0.85;
+}
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+  .mh-navbar-container {
+    padding: 12px 16px;
+  }
+  .mh-search-wrapper {
+    display: none; /* Hide search bar on smaller screens to avoid cramming */
+  }
+}
+
+@media (max-width: 768px) {
+  .mh-nav-links {
+    display: none; /* Hide text nav links */
+  }
+  .mh-actions-divider {
+    display: none;
+  }
+}

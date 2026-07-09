@@ -1,0 +1,90 @@
+.chat-sidebar {
+  width: 320px;
+  border-right: 1px solid #f2f2f7;
+  display: flex;
+  flex-direction: column;
+  background-color: #ffffff;
+  flex-shrink: 0;
+}
+
+.chat-sidebar-header {
+  padding: 24px 16px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border-bottom: 1px solid #f2f2f7;
+}
+
+.chat-sidebar-title {
+  font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
+  font-size: 24px;
+  font-weight: 750;
+  color: #1c1c1e;
+  margin: 0;
+}
+
+.chat-search-container {
+  position: relative;
+  width: 100%;
+}
+
+.chat-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #8e8e93;
+}
+
+.chat-search-input {
+  width: 100%;
+  height: 38px;
+  background-color: #f2f2f7;
+  border: 1px solid #f2f2f7;
+  border-radius: 10px;
+  padding: 0 16px 0 36px;
+  font-size: 14px;
+  color: #1c1c1e;
+  outline: none;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.chat-search-input:focus {
+  background-color: #ffffff;
+  border-color: #cbd5e1;
+}
+
+.conversations-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 8px;
+}
+
+.no-conversations {
+  font-size: 14px;
+  color: #8e8e93;
+  text-align: center;
+  margin-top: 32px;
+  font-weight: 500;
+}
+
+/* Responsive adjustment */
+@media (max-width: 768px) {
+  .chat-sidebar {
+    width: 80px;
+  }
+  .chat-sidebar-title,
+  .chat-search-container {
+    display: none;
+  }
+  .chat-sidebar-header {
+    padding: 16px 8px;
+    align-items: center;
+    border-bottom: none;
+  }
+  .conversations-list {
+    padding: 8px 4px;
+  }
+}
