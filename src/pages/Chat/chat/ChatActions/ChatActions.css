@@ -1,0 +1,23 @@
+.chat-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.action-icon-btn {
+  background: none;
+  border: none;
+  padding: 8px;
+  color: #636366;
+  cursor: pointer;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.action-icon-btn:hover {
+  background-color: #f2f2f7;
+  color: #1c1c1e;
+}

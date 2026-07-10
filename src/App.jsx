@@ -4,6 +4,16 @@ import Navbar from './components/layout/Navbar/Navbar';
 import Footer from './components/layout/Footer/Footer';
 import Home from './pages/Home/Home';
 import Login from './pages/Login/Login';
+import Admin from './pages/Admin/Admin';
+import MHNavbar from './pages/Marketplace-Homepage/MH-navbar/MHNavbar';
+import MarketplaceHomepage from './pages/Marketplace-Homepage/MarketplaceHomepage';
+import MHFooter from './pages/Marketplace-Homepage/MH-Footer/MHFooter';
+import Shop from './pages/Shop/Shop';
+import Chat from './pages/Chat/Chat';
+import SavedItems from './pages/Saved-Items/Saved-Items';
+import OrderHistory from './pages/OrderHistory/OrderHistory';
+import Settings from './pages/Settings/Settings';
+import Product from './pages/Product/Product';
 import Seller from './pages/Seller/Seller';
 
 // Admin layout + pages
@@ -21,15 +31,24 @@ import Settings from './pages/Admin/Settings';
 import './App.css';
 
 function MainLayout() {
+  const userRole = localStorage.getItem('userRole');
   return (
     <div className="app-wrapper" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <Navbar />
+      {userRole === 'customer' ? <MHNavbar /> : <Navbar />}
       <main style={{ flex: 1 }}>
         <Outlet />
       </main>
-      <Footer />
+      {userRole === 'customer' ? <MHFooter /> : <Footer />}
     </div>
   );
+}
+
+function HomeRouter() {
+  const userRole = localStorage.getItem('userRole');
+  if (userRole === 'customer') {
+    return <MarketplaceHomepage />;
+  }
+  return <Home />;
 }
 
 function App() {
@@ -38,7 +57,13 @@ function App() {
       <Routes>
         {/* Public routes */}
         <Route element={<MainLayout />}>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<HomeRouter />} />
+          <Route path="/shop" element={<Shop />} />
+          <Route path="/chat" element={<Chat />} />
+          <Route path="/saved" element={<SavedItems />} />
+          <Route path="/order-history" element={<OrderHistory />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/product/:id" element={<Product />} />
         </Route>
         <Route path="/login" element={<Login />} />
         <Route path="/seller" element={<Seller />} />

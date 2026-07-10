@@ -230,3 +230,37 @@ html, body, #root {
     padding: 32px 24px;
   }
 }
+
+/* Login Tabs */
+.login-tabs {
+  display: flex;
+  margin-bottom: 24px;
+  background-color: #faf9f6;
+  padding: 4px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.login-tab-btn {
+  flex: 1;
+  border: none;
+  background: none;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.login-tab-btn:hover {
+  color: #111111;
+}
+
+.login-tab-btn.active {
+  background-color: #ffffff;
+  color: #111111;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+}

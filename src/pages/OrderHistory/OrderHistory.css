@@ -1,0 +1,55 @@
+.container { max-width: 1180px; margin: 28px auto; padding: 0 18px; }
+.oh-page .oh-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+.oh-header h1 { margin:0; font-size:28px; }
+.oh-sub { margin:6px 0 0; color:#6b6b6b; font-size:14px; }
+.oh-header-actions { display:flex; gap:10px; }
+.oh-btn { padding:8px 14px; border-radius:10px; cursor:pointer; border:1px solid #ddd; background:#fff; font-size:14px; }
+.oh-btn.primary { background:#111; color:#fff; border-color:#111; }
+.oh-btn.outline { background:transparent; }
+.oh-metrics { display:flex; gap:18px; margin-bottom:20px; align-items:center; }
+.oh-metrics-left { flex:1; padding:22px; }
+.oh-metrics-right { display:flex; flex-direction:column; gap:14px; width:220px; }
+.card { background:#fff; border:1px solid #e9e6e2; border-radius:12px; box-shadow:0 1px 0 rgba(0,0,0,0.03); }
+.oh-metrics-title { font-weight:700; margin-bottom:8px; }
+.oh-metrics-desc { color:#6b6b6b; margin:0 0 14px; font-size:14px; line-height:1.4; }
+.oh-progress-row { display:flex; align-items:center; gap:12px; }
+.oh-progress-bar { background:#f3f3f3; height:12px; width:100%; border-radius:999px; overflow:hidden; }
+.oh-progress-filled { background:#6f4e2e; height:100%; border-radius:999px 0 0 999px; }
+.oh-progress-percent { min-width:40px; text-align:right; color:#6f4e2e; font-weight:700; }
+.oh-small-card { background:#fff4e9; padding:20px; border-radius:14px; text-align:center; font-weight:600; }
+.oh-impact-header { display:flex; align-items:center; gap:14px; margin-bottom:6px; }
+.oh-impact-icon { width:40px; height:40px; display:flex; align-items:center; justify-content:center; background:#fff5eb; border-radius:10px; color:#7f5e3c; }
+.oh-impact-title { font-weight:800; font-size:18px; }
+.oh-impact-goal-row { display:flex; justify-content:space-between; align-items:center; margin:8px 0; }
+.oh-impact-goal-label { color:#7f5e3c; font-weight:600; }
+.oh-impact-percent { color:#7f5e3c; font-weight:800; }
+.oh-small-card { background:#fff6f0; padding:22px; border-radius:12px; box-shadow:none; display:flex; flex-direction:column; justify-content:center; align-items:center; }
+.oh-small-value { font-weight:800; font-size:18px; color:#7f5e3c; }
+.oh-small-label { font-size:13px; color:#7f5e3c; margin-top:8px; }
+.oh-metrics-left .oh-progress-bar { background:#f3f3f3; height:12px; border-radius:999px; }
+.oh-metrics-left .oh-progress-filled { background:#6f4e2e; }
+.oh-table { margin-top:12px; padding:0; }
+.oh-table-inner { width:100%; border-collapse:collapse; }
+.oh-table-inner thead th { text-align:left; padding:16px; border-bottom:1px solid #eee; font-weight:600; color:#555; }
+.oh-table-inner tbody td { padding:14px 16px; border-bottom:1px solid #f4f4f4; vertical-align:middle; }
+.oh-product-cell { display:flex; gap:12px; align-items:center; }
+.oh-product-thumb img { width:56px; height:56px; object-fit:cover; border-radius:8px; }
+.oh-product-title { font-weight:600; }
+.oh-product-seller { color:#888; font-size:13px; }
+.oh-order-id { color:#666; width:120px; }
+.oh-seller { color:#666; width:160px; }
+.oh-date, .oh-total { white-space:nowrap; }
+.oh-status-pill { padding:6px 10px; border-radius:20px; font-size:12px; text-transform:capitalize; }
+.oh-status-pill.shipped { background:#eef8ff; color:#1b6cff; }
+.oh-status-pill.delivered { background:#eef7ee; color:#1a8f3b; }
+.oh-status-pill.pending { background:#fff8e8; color:#b36b00; }
+.oh-actions .oh-btn { padding:8px 10px; }
+.oh-table-footer { display:flex; justify-content:space-between; align-items:center; padding:12px 8px; }
+.oh-pagination { display:flex; gap:8px; }
+.oh-page-btn { padding:6px 10px; border-radius:6px; border:1px solid #e6e6e6; background:#fff; cursor:pointer; }
+.oh-page-btn.active { background:#111; color:#fff; border-color:#111; }
+
+@media (max-width: 800px) {
+  .oh-metrics { flex-direction:column; }
+  .oh-metrics-right { width:100%; flex-direction:row; }
+}

@@ -56,6 +56,10 @@
   transform: scale(1.1);
 }
 
+.heart-button.wishlisted {
+  color: #ff4d4f;
+}
+
 .product-details {
   display: flex;
   flex-direction: column;
@@ -96,3 +100,298 @@
 .add-to-cart-btn:hover {
   background-color: #333;
 }
+
+/* ========================================== */
+/* BROWSE PRODUCT CARD (SHOP PAGE) VARIANT   */
+/* ========================================== */
+.browse-product-card {
+  display: flex;
+  flex-direction: column;
+  background-color: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #f2f2f7;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+  transition: transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.25s ease;
+  cursor: pointer;
+}
+
+.browse-product-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.06);
+}
+
+.browse-product-img-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 0.88 / 1;
+  overflow: hidden;
+  background-color: #faf9f6;
+}
+
+.browse-product-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.browse-product-card:hover .browse-product-img {
+  transform: scale(1.03);
+}
+
+.browse-heart-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: #ffffff;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #1c1c1e;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
+  padding: 0;
+  z-index: 5;
+}
+
+.browse-heart-btn:hover {
+  transform: scale(1.08);
+  background-color: #ffffff;
+}
+
+.browse-heart-btn.wishlisted {
+  color: #ff3b30;
+}
+
+.browse-product-details {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.browse-product-title {
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1c1c1e;
+  margin: 0;
+  line-height: 1.4;
+  height: 40px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.browse-product-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #f2f2f7;
+  padding-top: 12px;
+  margin-top: auto;
+}
+
+.browse-product-price {
+  font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
+  font-size: 15.5px;
+  font-weight: 750;
+  color: #1c1c1e;
+}
+
+.browse-product-size {
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 12.5px;
+  color: #8e8e93;
+  font-weight: 500;
+}
+
+/* ========================================== */
+/* SAVED PRODUCT CARD VARIANT                */
+/* ========================================== */
+.saved-product-card {
+  display: flex;
+  flex-direction: column;
+  background-color: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #f2f2f7;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+  transition: transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.25s ease;
+  cursor: pointer;
+}
+
+.saved-product-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.06);
+}
+
+.saved-product-img-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 0.88 / 1;
+  overflow: hidden;
+  background-color: #faf9f6;
+}
+
+.saved-product-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.saved-product-card:hover .saved-product-img {
+  transform: scale(1.03);
+}
+
+.saved-heart-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: #ffffff;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #1c1c1e;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
+  padding: 0;
+  z-index: 5;
+}
+
+.saved-heart-btn:hover {
+  transform: scale(1.08);
+  background-color: #ffffff;
+  color: #ff3b30;
+}
+
+.saved-product-badge {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  border-radius: 16px;
+  padding: 5px 12px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  z-index: 5;
+  font-family: 'Inter', -apple-system, sans-serif;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.saved-product-badge.badge-sustainable {
+  background-color: #000000;
+  color: #ffffff;
+}
+
+.saved-product-badge.badge-best-seller {
+  background-color: #fcf4e8;
+  color: #a0723b;
+  border: 1px solid rgba(160, 114, 59, 0.2);
+}
+
+.saved-product-details {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.saved-product-category {
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #a0723b; /* Premium tan/gold accent */
+  text-transform: capitalize;
+}
+
+.saved-product-title {
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: #1c1c1e;
+  margin: 0;
+  line-height: 1.4;
+  height: 40px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.saved-product-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #f2f2f7;
+  padding-top: 12px;
+  margin-top: 4px;
+}
+
+.saved-product-price {
+  font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
+  font-size: 16px;
+  font-weight: 750;
+  color: #1c1c1e;
+}
+
+.saved-product-size {
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 13px;
+  color: #8e8e93;
+  font-weight: 500;
+}
+
+/* Browse variant badges for storefront */
+.browse-product-badge {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  z-index: 5;
+  font-family: 'Inter', -apple-system, sans-serif;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+.browse-product-badge.badge-vintage {
+  background-color: #ffffff;
+  color: #1c1c1e;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.browse-product-badge.badge-designer {
+  background-color: #a0723b;
+  color: #ffffff;
+}
+
+.browse-product-badge.badge-sustainable {
+  background-color: #000000;
+  color: #ffffff;
+}
+
+.browse-product-badge.badge-best-seller {
+  background-color: #fcf4e8;
+  color: #a0723b;
+  border: 1px solid rgba(160, 114, 59, 0.15);
+}
+
+

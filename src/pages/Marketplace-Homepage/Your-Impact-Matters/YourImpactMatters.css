@@ -1,0 +1,133 @@
+.your-impact {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.your-impact-card {
+  background-color: #fddca6; /* Pastel peach-orange background matching mockup */
+  border-radius: 16px;
+  padding: 48px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 40px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+}
+
+.your-impact-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.your-impact-title {
+  font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
+  font-size: 26px;
+  font-weight: 750;
+  color: #3b2c15; /* Dark brown-black */
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+.your-impact-description {
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 14.5px;
+  color: #5c4e36; /* Warm deep brown */
+  line-height: 1.6;
+  margin: 0;
+  max-width: 720px;
+}
+
+.your-impact-progress-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.your-impact-progress-bar {
+  width: 100%;
+  max-width: 500px;
+  height: 8px;
+  background-color: rgba(92, 78, 54, 0.15); /* Muted track */
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.your-impact-progress-fill {
+  height: 100%;
+  background-color: #5c4e36; /* Dark brown fill */
+  border-radius: 4px;
+}
+
+.your-impact-progress-text {
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #5c4e36;
+}
+
+.your-impact-action {
+  flex-shrink: 0;
+}
+
+.view-impact-btn {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background-color: #000000;
+  color: #ffffff;
+  border: none;
+  padding: 16px 36px;
+  font-size: 14.5px;
+  font-weight: 700;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.1s ease;
+  white-space: nowrap;
+}
+
+.view-impact-btn:hover {
+  opacity: 0.85;
+}
+
+.view-impact-btn:active {
+  transform: scale(0.98);
+}
+
+/* Responsive styles */
+@media (max-width: 992px) {
+  .your-impact-card {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 36px;
+    gap: 32px;
+  }
+  .your-impact-action {
+    width: 100%;
+  }
+  .view-impact-btn {
+    width: 100%;
+    text-align: center;
+  }
+  .your-impact-progress-bar {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 576px) {
+  .your-impact {
+    padding: 16px;
+  }
+  .your-impact-card {
+    padding: 24px;
+    border-radius: 12px;
+  }
+  .your-impact-title {
+    font-size: 22px;
+  }
+  .your-impact-description {
+    font-size: 13.5px;
+  }
+}

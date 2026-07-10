@@ -3,14 +3,29 @@ import { useNavigate } from 'react-router-dom';
 import './Login.css';
 
 function Login() {
-  const [email, setEmail] = useState('admin@secondlife.com');
+  const [loginType, setLoginType] = useState('customer'); // default to customer
+  const [email, setEmail] = useState('customer@secondlife.com');
   const [password, setPassword] = useState('••••••••');
   const navigate = useNavigate();
 
+  const handleTabChange = (type) => {
+    setLoginType(type);
+    if (type === 'customer') {
+      setEmail('customer@secondlife.com');
+    } else {
+      setEmail('admin@secondlife.com');
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Navigate to admin panel when clicking login
-    navigate('/admin');
+    if (loginType === 'customer') {
+      localStorage.setItem('userRole', 'customer');
+      window.location.href = '/';
+    } else {
+      localStorage.setItem('userRole', 'admin');
+      window.location.href = '/admin';
+    }
   };
 
   return (
@@ -18,14 +33,31 @@ function Login() {
       {/* Brand logo at the top */}
       <div className="login-logo-header">
         <h1>SecondLife</h1>
-        <p className="logo-subtext">MERCHANT & ADMIN PORTAL</p>
+        <p className="logo-subtext">Marketplace Portal</p>
       </div>
 
       {/* Main card */}
       <div className="merchant-login-card">
+        <div className="login-tabs">
+          <button
+            type="button"
+            className={`login-tab-btn ${loginType === 'customer' ? 'active' : ''}`}
+            onClick={() => handleTabChange('customer')}
+          >
+            Customer
+          </button>
+          <button
+            type="button"
+            className={`login-tab-btn ${loginType === 'admin' ? 'active' : ''}`}
+            onClick={() => handleTabChange('admin')}
+          >
+            Merchant / Admin
+          </button>
+        </div>
+
         <h2>Welcome back</h2>
         <p className="card-instructions">
-          Please enter your credentials to access the marketplace dashboard.
+          Please enter your credentials to access your account.
         </p>
 
         <form onSubmit={handleSubmit}>
@@ -66,7 +98,7 @@ function Login() {
 
           {/* Action button */}
           <button type="submit" className="login-submit-btn">
-            <span>Sign in to Dashboard</span>
+            <span>{loginType === 'customer' ? 'Sign in as Customer' : 'Sign in to Dashboard'}</span>
             <span className="arrow-symbol">→</span>
           </button>
         </form>
@@ -99,7 +131,7 @@ function Login() {
       <p className="login-copyright-text">
         © 2026 SECONDLIFE CLOTHES MARKETPLACE PTY LTD
       </p>
-    </div>
+      </div>
   );
 }
 
