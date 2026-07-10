@@ -1,29 +1,12 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Shop.css';
-
-// Import images
-import card1 from '../../assets/images/Browse-Marketplace/card-1.png';
-import card2 from '../../assets/images/Browse-Marketplace/card-2.png';
-import card3 from '../../assets/images/Browse-Marketplace/card-3.png';
-import card4 from '../../assets/images/Browse-Marketplace/card-4.png';
-import card5 from '../../assets/images/Browse-Marketplace/card-5.png';
-import card6 from '../../assets/images/Browse-Marketplace/card-6.png';
-import card7 from '../../assets/images/Browse-Marketplace/card-7.png';
-import card8 from '../../assets/images/Browse-Marketplace/card-8.png';
-
-const initialProducts = [
-  { id: 1, title: '90s Oversized Denim Jacket', price: '$85.00', size: 'Size M', image: card1, wishlisted: false },
-  { id: 2, title: 'Hand-Painted Italian Silk Scarf', price: '$120.00', size: 'One Size', image: card2, wishlisted: true },
-  { id: 3, title: 'Classic Mahogany Loafers', price: '$145.00', size: 'Size 9', image: card3, wishlisted: false },
-  { id: 4, title: 'Minimalist Wool Trench Coat', price: '$210.00', size: 'Size L', image: card4, wishlisted: false },
-  { id: 5, title: 'Retro Canvas Camera Bag', price: '$55.00', size: 'Accessory', image: card5, wishlisted: false },
-  { id: 6, title: 'Gold Rim Aviator Sunglasses', price: '$40.00', size: 'One Size', image: card6, wishlisted: false },
-  { id: 7, title: 'Checked Mohair Knit Sweater', price: '$95.00', size: 'Size S', image: card7, wishlisted: false },
-  { id: 8, title: 'Vintage Heirloom Watch', price: '$320.00', size: 'Excellent', image: card8, wishlisted: false }
-];
+import ProductCard from '../../components/ProductCard/ProductCard';
+import { browseProducts } from '../../data/browseProducts';
 
 const Shop = () => {
-  const [products, setProducts] = useState(initialProducts);
+  const navigate = useNavigate();
+  const [products, setProducts] = useState(browseProducts);
   const [selectedCity, setSelectedCity] = useState('New York, NY');
   const [selectedSize, setSelectedSize] = useState('XS');
   const [selectedCategory, setSelectedCategory] = useState('Vintage');
@@ -206,28 +189,13 @@ const Shop = () => {
           {/* Grid */}
           <div className="browse-products-grid">
             {products.map((product) => (
-              <div key={product.id} className="browse-product-card">
-                <div className="browse-product-img-wrapper">
-                  <img src={product.image} alt={product.title} className="browse-product-img" loading="lazy" />
-                  <button
-                    type="button"
-                    className={`browse-heart-btn ${product.wishlisted ? 'wishlisted' : ''}`}
-                    onClick={() => toggleWishlist(product.id)}
-                    aria-label="Wishlist Item"
-                  >
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill={product.wishlisted ? '#ff3b30' : 'none'} stroke={product.wishlisted ? '#ff3b30' : 'currentColor'} strokeWidth="2">
-                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                    </svg>
-                  </button>
-                </div>
-                <div className="browse-product-details">
-                  <h3 className="browse-product-title">{product.title}</h3>
-                  <div className="browse-product-meta-row">
-                    <span className="browse-product-price">{product.price}</span>
-                    <span className="browse-product-size">{product.size}</span>
-                  </div>
-                </div>
-              </div>
+              <ProductCard
+                key={product.id}
+                product={product}
+                variant="browse"
+                onWishlistToggle={toggleWishlist}
+                onClick={() => navigate(`/product/${product.id}`)}
+              />
             ))}
           </div>
 

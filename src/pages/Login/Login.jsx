@@ -131,7 +131,7 @@ function Login() {
       <p className="login-copyright-text">
         © 2026 SECONDLIFE CLOTHES MARKETPLACE PTY LTD
       </p>
-    </div>
+      </div>
   );
 }
 

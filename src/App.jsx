@@ -10,6 +10,10 @@ import MarketplaceHomepage from './pages/Marketplace-Homepage/MarketplaceHomepag
 import MHFooter from './pages/Marketplace-Homepage/MH-Footer/MHFooter';
 import Shop from './pages/Shop/Shop';
 import Chat from './pages/Chat/Chat';
+import SavedItems from './pages/Saved-Items/Saved-Items';
+import OrderHistory from './pages/OrderHistory/OrderHistory';
+import Settings from './pages/Settings/Settings';
+import Product from './pages/Product/Product';
 import './App.css';
 
 function MainLayout() {
@@ -41,6 +45,10 @@ function App() {
           <Route path="/" element={<HomeRouter />} />
           <Route path="/shop" element={<Shop />} />
           <Route path="/chat" element={<Chat />} />
+          <Route path="/saved" element={<SavedItems />} />
+          <Route path="/order-history" element={<OrderHistory />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/product/:id" element={<Product />} />
         </Route>
         <Route path="/login" element={<Login />} />
         <Route path="/admin" element={<Admin />} />

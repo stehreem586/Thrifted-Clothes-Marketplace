@@ -61,12 +61,17 @@ const MHNavbar = () => {
               <Link to="/shop">Browse</Link>
               {currentPath.startsWith('/shop') && <span className="mh-active-indicator"></span>}
             </li>
-            <li className="mh-nav-item">
-              <a href="#saved">Saved</a>
+            <li className={`mh-nav-item ${currentPath === '/saved' ? 'active' : ''}`}>
+              <Link to="/saved">Saved</Link>
+              {currentPath === '/saved' && <span className="mh-active-indicator"></span>}
             </li>
             <li className={`mh-nav-item ${currentPath.startsWith('/chat') ? 'active' : ''}`}>
               <Link to="/chat">Chat</Link>
               {currentPath.startsWith('/chat') && <span className="mh-active-indicator"></span>}
+            </li>
+            <li className={`mh-nav-item ${currentPath.startsWith('/order-history') ? 'active' : ''}`}>
+              <Link to="/order-history">Order History</Link>
+              {currentPath.startsWith('/order-history') && <span className="mh-active-indicator"></span>}
             </li>
           </ul>
 
@@ -103,6 +108,14 @@ const MHNavbar = () => {
                     <p className="mh-user-email">customer@secondlife.com</p>
                   </div>
                   <div className="mh-dropdown-divider"></div>
+                  <Link 
+                    to="/settings" 
+                    className="mh-dropdown-item" 
+                    onClick={() => setShowProfileMenu(false)}
+                    style={{ textDecoration: 'none', display: 'block', boxSizing: 'border-box' }}
+                  >
+                    Profile Settings
+                  </Link>
                   <button className="mh-dropdown-item logout-btn" onClick={handleLogout}>
                     Logout
                   </button>
