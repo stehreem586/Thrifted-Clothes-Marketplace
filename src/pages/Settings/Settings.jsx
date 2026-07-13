@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useAuth } from '../../context/AuthContext';
 import './Settings.css';
 
 const initialProfileState = {
@@ -11,6 +12,7 @@ const initialProfileState = {
 };
 
 const Settings = () => {
+  const { logout } = useAuth();
   const [activeTab, setActiveTab] = useState('account'); // 'account', 'notifications', 'privacy', 'shipping'
   const [profile, setProfile] = useState(initialProfileState);
   const [passwords, setPasswords] = useState({ current: '••••••••', new: '••••••••' });
@@ -117,12 +119,17 @@ const Settings = () => {
     setPasswords({ current: '••••••••', new: '••••••••' });
   };
 
-  const handleLogOut = () => {
-    localStorage.removeItem('userRole');
-    showToast('Logging out...', 'info');
-    setTimeout(() => {
-      window.location.href = '/';
-    }, 1000);
+  const handleLogOut = async () => {
+    try {
+      await logout();
+      showToast('Logging out...', 'info');
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 1000);
+    } catch (err) {
+      console.error(err);
+      showToast('Logout failed', 'error');
+    }
   };
 
   return (

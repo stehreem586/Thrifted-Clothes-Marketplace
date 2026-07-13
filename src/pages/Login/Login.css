@@ -1,83 +1,237 @@
+/* ============================================
+   Login / Auth Page — Full Design
+   ============================================ */
 html, body, #root {
   height: 100%;
   margin: 0;
   padding: 0;
 }
 
+/* ---- Light Mode Variables ---- */
+:root {
+  --auth-bg: radial-gradient(ellipse at 60% 40%, #fdf8f0 0%, #f5ede0 55%, #ede3d5 100%);
+  --card-bg: #ffffff;
+  --card-border: rgba(220, 210, 195, 0.6);
+  --text-main: #111111;
+  --text-muted: #6b7280;
+  --label-color: #374151;
+  --input-bg: #faf9f7;
+  --input-border: #e5e0d8;
+  --input-focus-border: #c19358;
+  --input-color: #111111;
+  --input-placeholder: #9ca3af;
+  --btn-bg: #111111;
+  --btn-text: #ffffff;
+  --btn-hover: #2d2d2d;
+  --google-bg: #ffffff;
+  --google-border: #e5e0d8;
+  --google-text: #374151;
+  --google-hover: #f9f7f4;
+  --divider-color: #d1c9be;
+  --divider-text: #9ca3af;
+  --badge-color: #9ca3af;
+  --footer-text: #b0a898;
+  --card-shadow: 0 16px 48px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04);
+  --alert-error-bg: #fff5f5;
+  --alert-error-text: #c0392b;
+  --alert-error-border: rgba(192,57,43,0.2);
+  --alert-success-bg: #f0fff4;
+  --alert-success-text: #1a7a43;
+  --alert-success-border: rgba(26,122,67,0.2);
+  --subtext-color: #555;
+  --mode-link-color: #111111;
+}
+
+/* ---- Dark Mode Variables (applied when html has .dark) ---- */
+html.dark {
+  --auth-bg: radial-gradient(ellipse at 60% 40%, #1a1a1f 0%, #111113 55%, #0d0d0f 100%);
+  --card-bg: #18181b;
+  --card-border: rgba(63, 63, 70, 0.7);
+  --text-main: #f4f4f5;
+  --text-muted: #a1a1aa;
+  --label-color: #d4d4d8;
+  --input-bg: #1c1c1f;
+  --input-border: #3f3f46;
+  --input-focus-border: #c19358;
+  --input-color: #f4f4f5;
+  --input-placeholder: #52525b;
+  --btn-bg: #f4f4f5;
+  --btn-text: #0d0d0f;
+  --btn-hover: #e4e4e7;
+  --google-bg: #1c1c1f;
+  --google-border: #3f3f46;
+  --google-text: #d4d4d8;
+  --google-hover: #27272a;
+  --divider-color: #3f3f46;
+  --divider-text: #52525b;
+  --badge-color: #52525b;
+  --footer-text: #52525b;
+  --card-shadow: 0 16px 48px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3);
+  --alert-error-bg: #2d0a0a;
+  --alert-error-text: #f87171;
+  --alert-error-border: rgba(248,113,113,0.2);
+  --alert-success-bg: #052212;
+  --alert-success-text: #4ade80;
+  --alert-success-border: rgba(74,222,128,0.2);
+  --subtext-color: #a1a1aa;
+  --mode-link-color: #f4f4f5;
+}
+
+/* ============================================
+   Container — full viewport, centered column
+   ============================================ */
 .merchant-login-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
-  height: 100%;
-  background: radial-gradient(circle at center, #fdfcf7 0%, #f5f1e6 100%);
-  font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
-  padding: 24px;
+  min-height: 110vh;
+  width: 100%;
+  background: var(--auth-bg);
+  background-attachment: fixed;
+  font-family: 'Inter', -apple-system, sans-serif;
+  padding: 48px 20px;
   box-sizing: border-box;
-  color: #111111;
+  color: var(--text-main);
+  position: relative;
+  transition: background 0.3s ease, color 0.3s ease;
+  -webkit-transition: background 0.3s ease, color 0.3s ease;
+  -moz-transition: background 0.3s ease, color 0.3s ease;
+  -ms-transition: background 0.3s ease, color 0.3s ease;
+  -o-transition: background 0.3s ease, color 0.3s ease;
 }
 
-/* Brand header above card */
+/* ---- Dark Mode Toggle ---- */
+.theme-toggle-btn {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 42px;
+  height: 42px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-main);
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
+  z-index: 100;
+}
+
+.theme-toggle-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+  -webkit-transform: scale(1.08);
+  -moz-transform: scale(1.08);
+  -ms-transform: scale(1.08);
+  -o-transform: scale(1.08);
+}
+
+/* ---- Brand Logo ---- */
 .login-logo-header {
   text-align: center;
   margin-bottom: 28px;
 }
 
-.login-logo-header h1 {
-  font-size: 32px;
-  font-weight: 750;
-  letter-spacing: -0.8px;
+/* ALWAYS golden — this is the brand identity */
+.login-logo-header h1.brand-logo-text {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: -1px;
   margin: 0;
+  color: #c19358 !important; /* NEVER override this */
+  line-height: 1;
 }
 
 .logo-subtext {
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 2px;
-  color: #8c9099;
-  margin: 6px 0 0 0;
+  letter-spacing: 3px;
+  color: var(--text-muted);
+  margin: 8px 0 0 0;
   text-transform: uppercase;
 }
 
-/* Centered card */
+/* ============================================
+   Auth Card
+   ============================================ */
 .merchant-login-card {
-  background-color: #ffffff;
-  width: 320px;
+  background: var(--card-bg);
+  width: 420px;
   max-width: 100%;
-  border-radius: 16px;
-  padding: 44px 36px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(226, 232, 240, 0.6);
+  height: 580px;
+  border-radius: 20px;
+  padding: 17px 44px;
+  margin: -10px;
+  box-shadow: var(--card-shadow);
+  border: 1px solid var(--card-border);
   margin-bottom: 24px;
+  box-sizing: border-box;
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  -webkit-transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  -moz-transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  -ms-transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  -o-transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .merchant-login-card h2 {
-  font-size: 22px;
-  font-weight: 750;
+  font-family: 'Inter', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
   margin: 0 0 8px 0;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.5px;
+  color: var(--text-main);
+  transition: color 0.3s ease;
 }
 
 .card-instructions {
-  font-size: 13px;
-  color: #64748b;
+  font-size: 14px;
+  color: var(--text-muted);
   line-height: 1.5;
   margin: 0 0 28px 0;
+  transition: color 0.3s ease;
 }
 
-/* Input Fields styling */
+/* ---- Alert Messages ---- */
+.auth-alert {
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 20px;
+  line-height: 1.5;
+  border: 1px solid transparent;
+}
+
+.error-alert {
+  background: var(--alert-error-bg);
+  color: var(--alert-error-text);
+  border-color: var(--alert-error-border);
+}
+
+.success-alert {
+  background: var(--alert-success-bg);
+  color: var(--alert-success-text);
+  border-color: var(--alert-success-border);
+}
+
+/* ---- Form Inputs ---- */
 .login-input-group {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .login-input-group label {
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 600;
-  color: #475569;
+  color: var(--label-color);
+  transition: color 0.3s ease;
 }
 
 .password-label-row {
@@ -86,113 +240,173 @@ html, body, #root {
   align-items: center;
 }
 
-.forgot-link {
+.forgot-link-btn {
+  background: none;
+  border: none;
+  padding: 0;
   font-size: 12px;
   font-weight: 600;
-  color: #ad7f45; /* Golden / brown forgot link color */
-  text-decoration: none;
+  color: #c19358;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.2s ease;
 }
 
-.forgot-link:hover {
-  text-decoration: underline;
-}
+.forgot-link-btn:hover { opacity: 0.75; text-decoration: underline; }
 
 .login-input-group input {
-  height: 44px;
-  background-color: #faf9f6; /* Soft off-white input bg */
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  height: 46px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
   padding: 0 14px;
   font-size: 14px;
-  color: #111111;
+  color: var(--input-color);
   outline: none;
+  font-family: inherit;
   transition: all 0.2s ease;
 }
 
 .login-input-group input:focus {
-  border-color: #111111;
-  background-color: #ffffff;
+  border-color: var(--input-focus-border);
+  background: var(--card-bg);
+  box-shadow: 0 0 0 3px rgba(193, 147, 88, 0.12);
 }
 
 .login-input-group input::placeholder {
-  color: #cbd5e1;
+  color: var(--input-placeholder);
 }
 
-/* Checkbox Row styling */
+/* ---- Checkbox Row ---- */
 .login-checkbox-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
-  margin-bottom: 28px;
+  margin-bottom: 22px;
 }
 
 .login-checkbox-row input[type="checkbox"] {
   width: 16px;
   height: 16px;
-  border-radius: 4px;
-  border: 1px solid #cbd5e1;
   cursor: pointer;
-  accent-color: #111111;
+  accent-color: #c19358;
+  margin-top: 2px;
+  flex-shrink: 0;
 }
 
 .login-checkbox-row label {
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 500;
-  color: #475569;
+  color: var(--text-muted);
   cursor: pointer;
   user-select: none;
+  line-height: 1.45;
+  transition: color 0.3s ease;
 }
 
-/* Submit Button */
+/* ---- Submit Button ---- */
 .login-submit-btn {
   width: 100%;
-  height: 46px;
-  background-color: #111111;
-  color: #ffffff;
+  height: 48px;
+  background: var(--btn-bg);
+  color: var(--btn-text);
   border: none;
-  border-radius: 8px;
-  font-size: 14px;
+  border-radius: 10px;
+  font-size: 14.5px;
   font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: background-color 0.2s ease;
+  font-family: inherit;
+  transition: background 0.2s ease, opacity 0.2s ease;
 }
 
-.login-submit-btn:hover {
-  background-color: #2a2a2a;
+.login-submit-btn:hover:not(:disabled) {
+  background: var(--btn-hover);
 }
 
-.arrow-symbol {
-  font-size: 15px;
+.login-submit-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
-/* Card Footer Text */
+.arrow-symbol { font-size: 16px; }
+
+/* ---- Divider ---- */
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 22px 0 14px;
+  color: var(--divider-text);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--divider-color);
+}
+
+/* ---- Google Button ---- */
+.google-login-btn {
+  width: 100%;
+  height: 46px;
+  background: var(--google-bg);
+  border: 1px solid var(--google-border);
+  color: var(--google-text);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-family: inherit;
+  margin-bottom: 4px;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+
+.google-login-btn:hover {
+  background: var(--google-hover);
+}
+
+/* ---- Footer toggle (login / signup switch) ---- */
 .card-footer-text {
   text-align: center;
-  font-size: 12.5px;
-  color: #64748b;
-  margin: 28px 0 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 20px 0 0 0;
+  line-height: 1.5;
+  transition: color 0.3s ease;
 }
 
-.apply-link {
-  font-weight: 650;
-  color: #111111;
-  text-decoration: none;
+.mode-toggle-link-btn {
+  background: none;
+  border: none;
+  color: #c19358;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
 }
 
-.apply-link:hover {
-  text-decoration: underline;
-}
+.mode-toggle-link-btn:hover { text-decoration: underline; }
 
-/* Badges section below card */
+/* ---- Trust Badges ---- */
 .login-trust-badges {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 14px;
   margin-bottom: 12px;
 }
 
@@ -200,67 +414,53 @@ html, body, #root {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 500;
-  color: #7c8088;
+  color: var(--badge-color);
+  transition: color 0.3s ease;
 }
 
 .badge-item svg {
-  color: #94a3b8;
+  opacity: 0.7;
 }
 
 .badge-divider {
-  color: #cbd5e1;
+  color: var(--divider-color);
   font-size: 12px;
 }
 
-/* Copyright footer */
+/* ---- Copyright ---- */
 .login-copyright-text {
   font-size: 10px;
   font-weight: 600;
-  color: #a1a1aa;
+  color: var(--footer-text);
   letter-spacing: 0.5px;
   margin: 0;
   text-align: center;
+  text-transform: uppercase;
+  transition: color 0.3s ease;
 }
 
-/* Responsive adjustments */
+/* ---- Field hint ---- */
+.field-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* ============================================
+   Responsive
+   ============================================ */
 @media (max-width: 480px) {
   .merchant-login-card {
     padding: 32px 24px;
+    border-radius: 16px;
   }
-}
-
-/* Login Tabs */
-.login-tabs {
-  display: flex;
-  margin-bottom: 24px;
-  background-color: #faf9f6;
-  padding: 4px;
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
-}
-
-.login-tab-btn {
-  flex: 1;
-  border: none;
-  background: none;
-  padding: 8px 12px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #64748b;
-  cursor: pointer;
-  border-radius: 6px;
-  transition: all 0.2s ease;
-  font-family: inherit;
-}
-
-.login-tab-btn:hover {
-  color: #111111;
-}
-
-.login-tab-btn.active {
-  background-color: #ffffff;
-  color: #111111;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+  .login-logo-header h1.brand-logo-text {
+    font-size: 32px;
+  }
+  .theme-toggle-btn {
+    top: 14px;
+    right: 14px;
+  }
 }

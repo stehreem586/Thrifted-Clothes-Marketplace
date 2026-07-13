@@ -52,13 +52,7 @@ export default function AdminLayout() {
           ))}
         </nav>
 
-        <div className="sidebar-bottom">
-          <button
-            className="create-listing-btn"
-            onClick={() => navigate('/admin/inventory')}
-          >
-            <Plus size={14} /> Create Listing
-          </button>
+         <div className="sidebar-bottom">
           <div className="sidebar-footer-links">
             <a href="#help" className="sidebar-footer-link"><HelpCircle size={13} /> Help Center</a>
             <a href="/" className="sidebar-footer-link"><LogOut size={13} /> Logout</a>
