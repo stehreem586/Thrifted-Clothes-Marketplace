@@ -1,5 +1,6 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../context/AuthContext';
 import './Navbar.css';
 import logo from '../../../assets/images/logo/logo.png';
 
@@ -14,6 +15,18 @@ const navLinks = [
 ];
 
 const Navbar = () => {
+  const { user, profile, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (err) {
+      console.error('Logout failed:', err);
+    }
+  };
+
   return (
     <>
       <div className="announcement-bar">
@@ -45,19 +58,55 @@ const Navbar = () => {
         </div>
 
         <div className="navbar-actions">
-          <Link to="/login" className="action-item login-action" style={{ textDecoration: 'none' }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
-            <span>Login / Sign Up</span>
-          </Link>
+          {user ? (
+            <div className="auth-user-menu" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+              {profile?.role === 'admin' && (
+                <Link to="/admin" className="portal-link" style={{ fontSize: '13px', fontWeight: '600', color: '#ad7f45', textDecoration: 'none' }}>
+                  Admin Portal
+                </Link>
+              )}
+              {profile?.role === 'merchant' && (
+                <Link to="/seller" className="portal-link" style={{ fontSize: '13px', fontWeight: '600', color: '#ad7f45', textDecoration: 'none' }}>
+                  Seller Portal
+                </Link>
+              )}
+              <span className="user-email-label" style={{ fontSize: '13px', color: '#64748b' }}>
+                {user.email.split('@')[0]}
+              </span>
+              <button 
+                onClick={handleLogout} 
+                className="action-item logout-action-btn"
+                style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  cursor: 'pointer', 
+                  fontSize: '13px', 
+                  fontWeight: '600', 
+                  color: '#111111',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px'
+                }}
+              >
+                Logout
+              </button>
+            </div>
+          ) : (
+            <Link to="/login" className="action-item login-action" style={{ textDecoration: 'none' }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+              <span>Login / Sign Up</span>
+            </Link>
+          )}
           
           <Link to="/saved" className="action-item icon-only" aria-label="Saved items">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
             </svg>
           </Link>
+
           
           <button className="action-item icon-only cart-action">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

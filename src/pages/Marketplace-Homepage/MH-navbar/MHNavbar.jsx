@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../../../context/AuthContext';
 import './MHNavbar.css';
 
 const MHNavbar = () => {
@@ -8,11 +9,17 @@ const MHNavbar = () => {
   const currentPath = location.pathname;
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState('New York');
+  const { user, logout } = useAuth();
 
-  const handleLogout = () => {
-    localStorage.removeItem('userRole');
-    window.location.href = '/';
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (err) {
+      console.error('Logout failed:', err);
+    }
   };
+
 
   return (
     <nav className="mh-navbar">
@@ -104,8 +111,8 @@ const MHNavbar = () => {
               {showProfileMenu && (
                 <div className="mh-profile-dropdown">
                   <div className="mh-dropdown-header">
-                    <p className="mh-user-name">Customer User</p>
-                    <p className="mh-user-email">customer@secondlife.com</p>
+                    <p className="mh-user-name">{user?.email ? user.email.split('@')[0] : 'Customer User'}</p>
+                    <p className="mh-user-email">{user?.email || 'customer@secondlife.com'}</p>
                   </div>
                   <div className="mh-dropdown-divider"></div>
                   <Link 
