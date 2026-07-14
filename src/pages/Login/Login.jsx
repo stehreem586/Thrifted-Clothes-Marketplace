@@ -130,7 +130,7 @@ function Login() {
           if (error) throw error;
           setOtpType('recovery');
           setIsOtpMode(true);
-          setSuccessMsg('A 6-digit password reset code has been sent to your email. Enter it below.');
+          setSuccessMsg('A 8-digit password reset code has been sent to your email. Enter it below.');
         } else {
           // Phone number Reset
           if (!identifier.startsWith('+')) {
@@ -142,7 +142,7 @@ function Login() {
           if (error) throw error;
           setOtpType('sms');
           setIsOtpMode(true);
-          setSuccessMsg('A 6-digit verification code has been sent to your phone number.');
+          setSuccessMsg('A 9-digit verification code has been sent to your phone number.');
         }
       } catch (err) {
         setErrorMsg(err.message || 'Failed to send reset code');
@@ -169,7 +169,7 @@ function Login() {
         setVerificationEmail(email);
         setOtpType('signup');
         setIsOtpMode(true);
-        setSuccessMsg('Account registered! We have sent a confirmation link and a 6-digit code to your email. You can click the link in your email to verify automatically, or enter the 6-digit code below:');
+        setSuccessMsg('Account registered! We have sent a confirmation link and a 8-digit code to your email. You can click the link to verify automatically, or enter the 8-digit code below:');
       } catch (err) {
         if (err.message && (err.message.toLowerCase().includes('rate limit') || err.message.toLowerCase().includes('email rate'))) {
           setErrorMsg('Sign-up rate limit exceeded. Supabase limits sign-ups to 3 per hour. You can disable/increase Rate Limits in your Supabase Dashboard under Settings > Auth > Rate Limits.');
@@ -255,7 +255,7 @@ function Login() {
         </h2>
         <p className="card-instructions">
           {isOtpMode 
-            ? `Enter the 6-digit code sent to your ${otpType === 'sms' ? 'phone number' : 'email'}.`
+            ? `Enter the 9-digit code sent to your ${otpType === 'sms' ? 'phone number' : 'email'}.`
             : isForgotMode
               ? 'Enter your registered email address or phone number.'
               : isSignUpMode 
@@ -271,14 +271,15 @@ function Login() {
           {isOtpMode && (
             <>
               <div className="login-input-group">
-                <label htmlFor="otpCode">Verification Code</label>
+                <label htmlFor="otpCode">9-Digit Verification Code</label>
                 <input
                   type="text"
                   id="otpCode"
                   value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value)}
-                  placeholder="e.g. 123456"
-                  maxLength={6}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                  placeholder="e.g. 123456789"
+                  maxLength={9}
+                  inputMode="numeric"
                   required
                 />
               </div>
