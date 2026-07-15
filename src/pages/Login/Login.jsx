@@ -5,6 +5,21 @@ import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../utils/supabaseClient';
 import './Login.css';
 
+// Password strength checker
+function getPasswordStrength(password) {
+  if (!password || password.length === 0) return null;
+  if (password.length < 8) return { level: 'weak', label: 'Weak', score: 1 };
+  let score = 0;
+  if (password.length >= 8) score++;
+  if (password.length >= 10) score++;
+  if (/[A-Z]/.test(password)) score++;
+  if (/[0-9]/.test(password)) score++;
+  if (/[^A-Za-z0-9]/.test(password)) score++;
+  if (score <= 2) return { level: 'weak', label: 'Weak', score: 1 };
+  if (score <= 3) return { level: 'good', label: 'Good', score: 2 };
+  return { level: 'strong', label: 'Strong', score: 3 };
+}
+
 function Login() {
   const [isSignUpMode, setIsSignUpMode] = useState(false);
   const [isForgotMode, setIsForgotMode] = useState(false);
@@ -20,20 +35,50 @@ function Login() {
   const [forgotIdentifier, setForgotIdentifier] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [staySignedIn, setStaySignedIn] = useState(true);
 
   // Status states
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [loadingAction, setLoadingAction] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [showDuplicateEmailPopup, setShowDuplicateEmailPopup] = useState(false);
   
   const { login, signup, loginWithGoogle, user } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
+  const passwordStrength = isSignUpMode 
+    ? getPasswordStrength(password) 
+    : (isOtpMode && (otpType === 'recovery' || otpType === 'sms')) 
+      ? getPasswordStrength(newPassword) 
+      : null;
+
+  // Listen to hash change for password recovery redirection link processing
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash;
+      if (hash && hash.includes('type=recovery')) {
+        setOtpType('recovery');
+        setIsOtpMode(true);
+        setIsForgotMode(false);
+        setIsSignUpMode(false);
+        setSuccessMsg('You have successfully authenticated via recovery link. Please enter your new password below.');
+      }
+    };
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
+
   // If user is already authenticated (e.g. after clicking email confirmation link), redirect them
   useEffect(() => {
     if (user) {
-      navigate('/');
+      // Check if they came from password recovery hash
+      const isRecovering = window.location.hash.includes('type=recovery');
+      if (!isRecovering) {
+        navigate('/');
+      }
     }
   }, [user, navigate]);
 
@@ -67,6 +112,39 @@ function Login() {
     setPassword('');
   };
 
+  const handleGoToLoginFromPopup = () => {
+    setShowDuplicateEmailPopup(false);
+    setIsSignUpMode(false);
+    setErrorMsg('');
+    setSuccessMsg('');
+  };
+
+  const handleResend = async () => {
+    setResendLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      if (otpType === 'signup') {
+        const { error } = await supabase.auth.resend({
+          type: 'signup',
+          email: verificationEmail || email,
+        });
+        if (error) throw error;
+        setSuccessMsg('Verification code resent successfully!');
+      } else if (otpType === 'recovery') {
+        const { error } = await supabase.auth.resetPasswordForEmail(forgotIdentifier || verificationEmail || email, {
+          redirectTo: window.location.origin + '/login',
+        });
+        if (error) throw error;
+        setSuccessMsg('Reset code resent successfully!');
+      }
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to resend code');
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
@@ -84,7 +162,7 @@ function Login() {
         if (otpType === 'sms') {
           verifyArgs.phone = forgotIdentifier;
         } else if (otpType === 'recovery') {
-          verifyArgs.email = forgotIdentifier;
+          verifyArgs.email = forgotIdentifier || verificationEmail || email;
         } else {
           // signup
           verifyArgs.email = verificationEmail || email;
@@ -95,6 +173,11 @@ function Login() {
 
         if (otpType === 'recovery' || otpType === 'sms') {
           if (newPassword) {
+            if (newPassword.length < 8) {
+              setErrorMsg('Password must be at least 8 characters');
+              setLoadingAction(false);
+              return;
+            }
             const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
             if (updateError) throw updateError;
             setSuccessMsg('Password updated! Redirecting...');
@@ -106,10 +189,10 @@ function Login() {
           }, 2000);
         } else {
           // signup confirmation
-          setSuccessMsg('Email verified successfully! Redirecting to marketplace...');
+          setSuccessMsg('Email verified successfully! Redirecting to profile setup...');
           setTimeout(() => {
-            navigate('/');
-          }, 2000);
+            navigate('/profile-setup');
+          }, 1500);
         }
       } catch (err) {
         setErrorMsg(err.message || 'Verification failed. Please check the code.');
@@ -130,7 +213,7 @@ function Login() {
           if (error) throw error;
           setOtpType('recovery');
           setIsOtpMode(true);
-          setSuccessMsg('A 8-digit password reset code has been sent to your email. Enter it below.');
+          setSuccessMsg('A reset code / link has been sent to your email. Enter the code below:');
         } else {
           // Phone number Reset
           if (!identifier.startsWith('+')) {
@@ -158,29 +241,40 @@ function Login() {
         setLoadingAction(false);
         return;
       }
-      if (password.length < 6) {
-        setErrorMsg('Password must be at least 6 characters');
+      if (password.length < 8) {
+        setErrorMsg('Password must be at least 8 characters');
         setLoadingAction(false);
         return;
       }
 
       try {
-        await signup(email, password, 'customer');
+        const result = await signup(email, password, 'customer');
+        
+        // Detect duplicate signup
+        if (result?.user?.identities?.length === 0) {
+          setShowDuplicateEmailPopup(true);
+          setLoadingAction(false);
+          return;
+        }
+
         setVerificationEmail(email);
         setOtpType('signup');
         setIsOtpMode(true);
-        setSuccessMsg('Account registered! We have sent a confirmation link and a 8-digit code to your email. You can click the link to verify automatically, or enter the 8-digit code below:');
+        setSuccessMsg('Account registered! We have sent a confirmation link and a code to your email. Enter the code below:');
       } catch (err) {
-        if (err.message && (err.message.toLowerCase().includes('rate limit') || err.message.toLowerCase().includes('email rate'))) {
+        const msg = err.message || '';
+        if (msg.toLowerCase().includes('already registered') || msg.toLowerCase().includes('already exists') || msg.toLowerCase().includes('user already')) {
+          setShowDuplicateEmailPopup(true);
+        } else if (msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('email rate')) {
           setErrorMsg('Sign-up rate limit exceeded. Supabase limits sign-ups to 3 per hour. You can disable/increase Rate Limits in your Supabase Dashboard under Settings > Auth > Rate Limits.');
         } else {
-          setErrorMsg(err.message || 'An error occurred during signup');
+          setErrorMsg(msg || 'An error occurred during signup');
         }
       }
     } else {
       // Log In execution
       try {
-        const data = await login(email, password);
+        const data = await login(email, password, staySignedIn);
         const userRole = data.user?.user_metadata?.role || 'customer';
         localStorage.setItem('userRole', userRole);
         navigate('/');
@@ -292,9 +386,22 @@ function Login() {
                     id="newPassword"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Min 6 characters"
+                    placeholder="Min 8 characters"
                     required
                   />
+                  {passwordStrength && (
+                    <div className="password-strength-wrapper">
+                      <div className="password-strength-bar">
+                        <div
+                          className={`password-strength-fill strength-${passwordStrength.level}`}
+                          style={{ width: `${(passwordStrength.score / 3) * 100}%` }}
+                        />
+                      </div>
+                      <span className={`password-strength-label strength-${passwordStrength.level}`}>
+                        {passwordStrength.label}
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </>
@@ -352,6 +459,24 @@ function Login() {
                   placeholder="••••••••"
                   required
                 />
+                {isSignUpMode && passwordStrength && (
+                  <div className="password-strength-wrapper" style={{ marginTop: '8px' }}>
+                    <div className="password-strength-bar" style={{ flex: 1, height: '6px', background: '#e5e0d8', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div
+                        className={`password-strength-fill strength-${passwordStrength.level}`}
+                        style={{ 
+                          width: `${(passwordStrength.score / 3) * 100}%`,
+                          height: '100%',
+                          background: passwordStrength.level === 'weak' ? '#ef4444' : passwordStrength.level === 'good' ? '#f59e0b' : '#22c55e',
+                          transition: 'width 0.3s ease'
+                        }}
+                      />
+                    </div>
+                    <span className={`password-strength-label strength-${passwordStrength.level}`} style={{ fontSize: '11px', fontWeight: 'bold', marginLeft: '8px', color: passwordStrength.level === 'weak' ? '#ef4444' : passwordStrength.level === 'good' ? '#f59e0b' : '#22c55e' }}>
+                      {passwordStrength.label}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Confirm Password (only in signup mode) */}
@@ -398,6 +523,22 @@ function Login() {
             <span className="arrow-symbol">→</span>
           </button>
         </form>
+
+        {/* Resend Code Button for OTP Screen */}
+        {isOtpMode && (
+          <div className="otp-resend-row" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '16px', fontSize: '13px', color: 'var(--text-muted)' }}>
+            <span>Didn't receive the code?</span>
+            <button
+              type="button"
+              className="resend-code-btn"
+              onClick={handleResend}
+              disabled={resendLoading}
+              style={{ background: 'none', border: 'none', color: '#c19358', fontWeight: 'bold', cursor: 'pointer', padding: '0', textDecoration: 'underline' }}
+            >
+              {resendLoading ? 'Sending...' : 'Resend Code'}
+            </button>
+          </div>
+        )}
 
         {/* Google Authentication Section (Always placed below submit buttons) */}
         {!isOtpMode && (
