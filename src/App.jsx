@@ -14,8 +14,25 @@ import SavedItems from './pages/Saved-Items/Saved-Items';
 import OrderHistory from './pages/OrderHistory/OrderHistory';
 import Settings from './pages/Settings/Settings';
 import Product from './pages/Product/Product';
+<<<<<<< HEAD
 import Storefront from './pages/Storefront/Storefront';
 import SearchResults from './pages/SearchResults/SearchResults';
+=======
+import Seller from './pages/Seller/Seller';
+
+// Admin layout + pages
+import AdminLayout from './pages/Admin/AdminLayout';
+import AdminDashboard from './pages/Admin/AdminDashboard';
+import Sellers from './pages/Admin/Sellers';
+import Inventory from './pages/Admin/Inventory';
+import Analytics from './pages/Admin/Analytics';
+import Sales from './pages/Admin/Sales';
+import Messages from './pages/Admin/Messages';
+import Community from './pages/Admin/Community';
+import Disputes from './pages/Admin/Disputes';
+import Settings from './pages/Admin/Settings';
+
+>>>>>>> 8d955598406e3b191e0ddbbd67a1e594646385b3
 import './App.css';
 
 function MainLayout() {
@@ -43,6 +60,7 @@ function App() {
   return (
     <Router>
       <Routes>
+        {/* Public routes */}
         <Route element={<MainLayout />}>
           <Route path="/" element={<HomeRouter />} />
           <Route path="/shop" element={<Shop />} />
@@ -55,7 +73,20 @@ function App() {
           <Route path="/storefront" element={<Storefront />} />
         </Route>
         <Route path="/login" element={<Login />} />
-        <Route path="/admin" element={<Admin />} />
+        <Route path="/seller" element={<Seller />} />
+
+        {/* Admin portal — all inside AdminLayout */}
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="sellers" element={<Sellers />} />
+          <Route path="inventory" element={<Inventory />} />
+          <Route path="analytics" element={<Analytics />} />
+          <Route path="sales" element={<Sales />} />
+          <Route path="messages" element={<Messages />} />
+          <Route path="community" element={<Community />} />
+          <Route path="disputes" element={<Disputes />} />
+          <Route path="settings" element={<Settings />} />
+        </Route>
       </Routes>
     </Router>
   );
