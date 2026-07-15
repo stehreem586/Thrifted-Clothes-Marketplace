@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Outlet, Navigate } from 'react-router-dom';
 import Navbar from './components/layout/Navbar/Navbar';
 import Footer from './components/layout/Footer/Footer';
 import Home from './pages/Home/Home';
@@ -15,6 +15,7 @@ import OrderHistory from './pages/OrderHistory/OrderHistory';
 import Settings from './pages/Settings/Settings';
 import Product from './pages/Product/Product';
 import Seller from './pages/Seller/Seller';
+import ProfileSetup from './pages/ProfileSetup/ProfileSetup';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import { useAuth } from './context/AuthContext';
 
@@ -31,30 +32,43 @@ import AdminSettings from './pages/Admin/Settings';
 
 import './App.css';
 
-function MainLayout() {
-  const { user, profile, loading } = useAuth();
-  // Render nothing (blank) while auth is loading to prevent flash
-  if (loading) {
-    return (
+/* ─── Loading Spinner ─────────────────────────────────────── */
+function LoadingSpinner() {
+  return (
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: 'var(--auth-bg, #fffdf9)'
+    }}>
       <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'var(--auth-bg, #fffdf9)'
-      }}>
-        <div style={{
-          width: 36,
-          height: 36,
-          border: '3px solid #e5e0d8',
-          borderTopColor: '#c19358',
-          borderRadius: '50%',
-          animation: 'spin 0.7s linear infinite'
-        }} />
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
+        width: 36,
+        height: 36,
+        border: '3px solid #e5e0d8',
+        borderTopColor: '#c19358',
+        borderRadius: '50%',
+        animation: 'spin 0.7s linear infinite'
+      }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
+
+/* ─── Main Layout (with nav + footer) ─────────────────────── */
+function MainLayout() {
+  const { user, profile, loading, isProfileComplete } = useAuth();
+
+  if (loading) return <LoadingSpinner />;
+
+  // If logged-in customer hasn't completed profile, redirect to setup
+  if (user && profile !== undefined) {
+    const role = profile?.role || 'customer';
+    if (role === 'customer' && !isProfileComplete(profile)) {
+      return <Navigate to="/profile-setup" replace />;
+    }
   }
+
   const userRole = user ? (profile?.role || 'customer') : null;
   return (
     <div className="app-wrapper" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
@@ -67,17 +81,26 @@ function MainLayout() {
   );
 }
 
+/* ─── Home Router (customer vs guest/other roles) ─────────── */
 function HomeRouter() {
   const { user, profile, loading } = useAuth();
-  // Wait for Supabase session to resolve — prevents guest flash
   if (loading) return null;
   const userRole = user ? (profile?.role || 'customer') : null;
-  if (userRole === 'customer') {
-    return <MarketplaceHomepage />;
-  }
+  if (userRole === 'customer') return <MarketplaceHomepage />;
   return <Home />;
 }
 
+/* ─── Profile Setup Guard ─────────────────────────────────── */
+// Redirect away if profile is already complete
+function ProfileSetupGuard() {
+  const { user, profile, loading, isProfileComplete } = useAuth();
+  if (loading) return <LoadingSpinner />;
+  if (!user) return <Navigate to="/login" replace />;
+  if (isProfileComplete(profile)) return <Navigate to="/" replace />;
+  return <ProfileSetup />;
+}
+
+/* ─── App ─────────────────────────────────────────────────── */
 function App() {
   return (
     <Router>
@@ -92,21 +115,26 @@ function App() {
           <Route path="/settings" element={<Settings />} />
           <Route path="/product/:id" element={<Product />} />
         </Route>
+
+        {/* Auth */}
         <Route path="/login" element={<Login />} />
-        
+
+        {/* One-time profile setup — shown after first signup, skipped if complete */}
+        <Route path="/profile-setup" element={<ProfileSetupGuard />} />
+
         {/* Seller/Merchant portal - protected */}
-        <Route 
-          path="/seller" 
+        <Route
+          path="/seller"
           element={
             <ProtectedRoute allowedRoles={['merchant', 'admin']}>
               <Seller />
             </ProtectedRoute>
-          } 
+          }
         />
 
         {/* Admin portal — protected and inside AdminLayout */}
-        <Route 
-          path="/admin" 
+        <Route
+          path="/admin"
           element={
             <ProtectedRoute allowedRoles={['admin']}>
               <AdminLayout />
@@ -129,4 +157,3 @@ function App() {
 }
 
 export default App;
-
