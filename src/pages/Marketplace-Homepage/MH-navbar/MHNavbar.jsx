@@ -1,18 +1,34 @@
-import React, { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import './MHNavbar.css';
 
 const MHNavbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const currentPath = location.pathname;
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState('New York');
+  
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
+
+  // Sync searchQuery state with the query param in the URL
+  useEffect(() => {
+    setSearchQuery(searchParams.get('q') || '');
+  }, [searchParams]);
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('userRole');
     window.location.href = '/';
   };
+
 
   return (
     <nav className="mh-navbar">
@@ -26,15 +42,19 @@ const MHNavbar = () => {
 
         {/* Search bar + Location */}
         <div className="mh-search-wrapper">
-          <div className="mh-search-container">
-            <svg className="mh-search-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
+          <form className="mh-search-container" onSubmit={handleSearchSubmit}>
+            <button type="submit" style={{ background: 'none', border: 'none', padding: 0, display: 'flex', alignItems: 'center', cursor: 'pointer', color: 'inherit' }}>
+              <svg className="mh-search-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+            </button>
             <input 
               type="text" 
               placeholder="Search pre-loved items..." 
               className="mh-search-input"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
             <div className="mh-search-divider"></div>
             <div className="mh-location-picker">
@@ -47,7 +67,7 @@ const MHNavbar = () => {
                 <polyline points="6 9 12 15 18 9"></polyline>
               </svg>
             </div>
-          </div>
+          </form>
         </div>
 
         {/* Links & Actions */}

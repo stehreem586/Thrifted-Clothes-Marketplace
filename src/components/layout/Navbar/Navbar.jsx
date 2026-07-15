@@ -1,5 +1,5 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import './Navbar.css';
 import logo from '../../../assets/images/logo/logo.png';
 
@@ -14,6 +14,21 @@ const navLinks = [
 ];
 
 const Navbar = () => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
+
+  useEffect(() => {
+    setSearchQuery(searchParams.get('q') || '');
+  }, [searchParams]);
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
   return (
     <>
       <div className="announcement-bar">
@@ -34,15 +49,20 @@ const Navbar = () => {
           </Link>
         </div>
 
-        <div className="navbar-search">
-          <input type="text" placeholder="Search outfits, brands, or categories..." />
-          <button className="search-btn" aria-label="Search">
+        <form className="navbar-search" onSubmit={handleSearchSubmit}>
+          <input 
+            type="text" 
+            placeholder="Search outfits, brands, or categories..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <button type="submit" className="search-btn" aria-label="Search">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8"></circle>
               <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
           </button>
-        </div>
+        </form>
 
         <div className="navbar-actions">
           <Link to="/login" className="action-item login-action" style={{ textDecoration: 'none' }}>

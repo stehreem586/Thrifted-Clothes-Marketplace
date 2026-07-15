@@ -15,6 +15,13 @@ const Product = () => {
     similarProducts.find(p => p.id === productId) || 
     browseProducts.find(p => p.id === 4); // default to Archival Camel Wool Overcoat if not found
 
+  const sellerInfo = currentProduct.seller || {
+    name: "Elena's Archive",
+    rating: '4.9 (124)',
+    location: 'Milan, Italy',
+    avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=150'
+  };
+
   const productThumbnails = currentProduct.thumbnails || [
     { id: 1, name: 'Full View', transform: 'scale(1)', transformOrigin: 'center center' },
     { id: 2, name: 'Collar Detail', transform: 'scale(1.8)', transformOrigin: 'center 15%' },
@@ -51,7 +58,7 @@ const Product = () => {
   };
 
   const handleChatClick = () => {
-    navigate('/storefront');
+    navigate('/chat', { state: { startChatWith: sellerInfo.name } });
   };
 
   const handleBuyNow = () => {
@@ -69,13 +76,6 @@ const Product = () => {
   const sustainabilityLabel = currentProduct.sustainability || 'High';
   const descriptionLabel = currentProduct.description || 
     'A premium selected pre-loved item, chosen for its exceptional quality and style. Responsibly sourced and curated by our community to give fashion a second life.';
-  
-  const sellerInfo = currentProduct.seller || {
-    name: "Elena's Archive",
-    rating: '4.9 (124)',
-    location: 'Milan, Italy',
-    avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=150'
-  };
 
   return (
     <div className="product-page-wrapper">
