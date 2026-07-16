@@ -4,7 +4,6 @@ import Navbar from './components/layout/Navbar/Navbar';
 import Footer from './components/layout/Footer/Footer';
 import Home from './pages/Home/Home';
 import Login from './pages/Login/Login';
-import Admin from './pages/Admin/Admin';
 import MHNavbar from './pages/Marketplace-Homepage/MH-navbar/MHNavbar';
 import MarketplaceHomepage from './pages/Marketplace-Homepage/MarketplaceHomepage';
 import MHFooter from './pages/Marketplace-Homepage/MH-Footer/MHFooter';
@@ -28,7 +27,7 @@ import Sales from './pages/Admin/Sales';
 import Messages from './pages/Admin/Messages';
 import Community from './pages/Admin/Community';
 import Disputes from './pages/Admin/Disputes';
-import Settings from './pages/Admin/Settings';
+import AdminSettings from './pages/Admin/Settings';
 
 import './App.css';
 
@@ -82,7 +81,7 @@ function App() {
           <Route path="messages" element={<Messages />} />
           <Route path="community" element={<Community />} />
           <Route path="disputes" element={<Disputes />} />
-          <Route path="settings" element={<Settings />} />
+          <Route path="settings" element={<AdminSettings />} />
         </Route>
       </Routes>
     </Router>

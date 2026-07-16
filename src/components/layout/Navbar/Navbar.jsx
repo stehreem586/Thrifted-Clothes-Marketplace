@@ -1,10 +1,8 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { useTheme } from '../../../context/ThemeContext';
 import EditProfile from '../../../pages/EditProfile/EditProfile';
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import './Navbar.css';
 import logo from '../../../assets/images/logo/logo.png';
 
@@ -19,11 +17,9 @@ const navLinks = [
 ];
 
 const Navbar = () => {
-<<<<<<< HEAD
   const { user, profile, logout } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
-  const navigate = useNavigate();
-  const [showDropdown, setShowDropdown]   = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
 
   const handleLogout = async () => {
@@ -50,7 +46,6 @@ const Navbar = () => {
     return <div className="nb-avatar-initials">{initial}</div>;
   };
 
-=======
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
@@ -66,7 +61,6 @@ const Navbar = () => {
     }
   };
 
->>>>>>> tehreem
   return (
     <>
       <div className="announcement-bar">
@@ -88,15 +82,20 @@ const Navbar = () => {
             </Link>
           </div>
 
-          <div className="navbar-search">
-            <input type="text" placeholder="Search outfits, brands, or categories..." />
-            <button className="search-btn" aria-label="Search">
+          <form className="navbar-search" onSubmit={handleSearchSubmit}>
+            <input
+              type="text"
+              placeholder="Search outfits, brands, or categories..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <button type="submit" className="search-btn" aria-label="Search">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8"></circle>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
               </svg>
             </button>
-          </div>
+          </form>
 
           <div className="navbar-actions">
             {user ? (
@@ -129,8 +128,8 @@ const Navbar = () => {
                         {profile?.avatar_url
                           ? <img src={profile.avatar_url} alt="Avatar" className="nb-dropdown-avatar-img" />
                           : <div className="nb-dropdown-avatar-initials">
-                              {(profile?.name || user?.email || '?').charAt(0).toUpperCase()}
-                            </div>
+                            {(profile?.name || user?.email || '?').charAt(0).toUpperCase()}
+                          </div>
                         }
                       </div>
                       <div>
@@ -170,9 +169,9 @@ const Navbar = () => {
             )}
 
             {/* Dark Mode Toggle */}
-            <button 
-              className="action-item icon-only nb-theme-toggle" 
-              onClick={toggleTheme} 
+            <button
+              className="action-item icon-only nb-theme-toggle"
+              onClick={toggleTheme}
               aria-label="Toggle dark mode"
               style={{
                 background: 'none',
@@ -222,7 +221,6 @@ const Navbar = () => {
           </div>
         </div>
 
-<<<<<<< HEAD
         <div className="navbar-bottom">
           <ul className="nav-links">
             {navLinks.map((link) => (
@@ -233,22 +231,6 @@ const Navbar = () => {
           </ul>
         </div>
       </nav>
-=======
-        <form className="navbar-search" onSubmit={handleSearchSubmit}>
-          <input 
-            type="text" 
-            placeholder="Search outfits, brands, or categories..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          <button type="submit" className="search-btn" aria-label="Search">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-          </button>
-        </form>
->>>>>>> tehreem
 
       {/* Edit Profile slide-in panel */}
       <EditProfile

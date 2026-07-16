@@ -81,12 +81,13 @@ html.dark {
 /* ============================================
    Container — full viewport, centered column
    ============================================ */
-.merchant-login-container {
+.merchant-login-container,
 .login-page-container {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 110vh;
+  min-height: 100vh;
   width: 100%;
   background: var(--auth-bg);
   background-attachment: fixed;
@@ -146,14 +147,6 @@ html.dark {
   margin: 0;
   color: #c19358 !important; /* NEVER override this */
   line-height: 1;
-  min-height: 100vh;
-  width: 100%;
-  background-color: #faf6ed; /* Soft warm beige background */
-  font-family: 'Inter', -apple-system, sans-serif;
-  position: relative;
-  overflow: hidden;
-  box-sizing: border-box;
-  padding: 40px 24px;
 }
 
 /* Floating Product Cards */
@@ -278,9 +271,10 @@ html.dark {
   min-height: 580px;
   border-radius: 20px;
   padding: 24px 44px;
-  margin: -10px;
+  margin: 0 auto;
   box-shadow: var(--card-shadow);
   border: 1px solid var(--card-border);
+}
 /* Main Card */
 .login-card {
   background-color: #ffffff;
@@ -349,6 +343,7 @@ html.dark {
   font-family: 'Inter', sans-serif;
   font-size: 24px;
   font-weight: 700;
+}
 .login-heading-title {
   font-size: 24px;
   font-weight: 700;
