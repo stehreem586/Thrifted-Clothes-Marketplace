@@ -7,6 +7,23 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [userMode, setUserMode] = useState(() => {
+    return localStorage.getItem('userMode') || 'buyer';
+  });
+  const [toast, setToast] = useState({ show: false, message: '' });
+
+  const showToast = (message) => {
+    setToast({ show: true, message });
+    setTimeout(() => {
+      setToast({ show: false, message: '' });
+    }, 3000);
+  };
+
+  const switchMode = (mode) => {
+    setUserMode(mode);
+    localStorage.setItem('userMode', mode);
+    showToast(`You are now in ${mode} mode`);
+  };
 
   const fetchProfile = async (userId) => {
     try {
@@ -189,6 +206,7 @@ export const AuthProvider = ({ children }) => {
       user, profile, loading,
       login, loginWithGoogle, signup, logout,
       fetchProfile, updateProfile, uploadAvatar, isProfileComplete,
+      userMode, switchMode, toast, showToast
     }}>
       {children}
     </AuthContext.Provider>

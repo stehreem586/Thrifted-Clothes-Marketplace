@@ -12,8 +12,13 @@ const MHNavbar = () => {
   const [showProfileMenu, setShowProfileMenu]     = useState(false);
   const [showEditProfile, setShowEditProfile]     = useState(false);
   const [selectedLocation, setSelectedLocation]   = useState('Pakistan');
-  const { user, profile, logout } = useAuth();
+  const { user, profile, logout, switchMode } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
+
+  const handleSellClick = () => {
+    switchMode('seller');
+    navigate('/seller');
+  };
 
   const handleLogout = async () => {
     try {
@@ -96,10 +101,6 @@ const MHNavbar = () => {
                 <Link to="/saved">Saved</Link>
                 {currentPath === '/saved' && <span className="mh-active-indicator"></span>}
               </li>
-              <li className={`mh-nav-item ${currentPath.startsWith('/chat') ? 'active' : ''}`}>
-                <Link to="/chat">Chat</Link>
-                {currentPath.startsWith('/chat') && <span className="mh-active-indicator"></span>}
-              </li>
               <li className={`mh-nav-item ${currentPath.startsWith('/order-history') ? 'active' : ''}`}>
                 <Link to="/order-history">Orders</Link>
                 {currentPath.startsWith('/order-history') && <span className="mh-active-indicator"></span>}
@@ -118,6 +119,16 @@ const MHNavbar = () => {
                   <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
                   <polyline points="22,6 12,13 2,6"></polyline>
                 </svg>
+              </button>
+
+              {/* Cart Icon */}
+              <button className="mh-icon-btn mh-cart-btn" aria-label="Cart">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                  <line x1="3" y1="6" x2="21" y2="6"></line>
+                  <path d="M16 10a4 4 0 0 1-8 0"></path>
+                </svg>
+                <span className="mh-cart-badge">2</span>
               </button>
 
               {/* Dark Mode Toggle */}
@@ -200,7 +211,7 @@ const MHNavbar = () => {
                     >
                       <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 8 }}>
                         <circle cx="12" cy="12" r="3" />
-                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
                       </svg>
                       Settings
                     </Link>
@@ -220,7 +231,7 @@ const MHNavbar = () => {
             </div>
 
             <div className="mh-actions-divider"></div>
-            <button className="mh-sell-btn">Sell an Item</button>
+            <button className="mh-sell-btn" onClick={handleSellClick}>Sell an Item</button>
           </div>
         </div>
       </nav>

@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import './Seller.css';
 import SellerDashboard from './SellerDashboard';
 import Inventory from './Inventory';
 import OrderHistory from './OrderHistory';
 
 function Seller() {
+  const { switchMode } = useAuth();
   const [activeTab, setActiveTab] = useState('inventory');
 
   // Search states (passed down to sub-views)
@@ -125,7 +128,7 @@ function Seller() {
 
           <div className="header-actions">
             <div className="header-nav-shortcuts">
-              <a href="/" className="shortcut-link">Marketplace</a>
+              <Link to="/" className="shortcut-link" onClick={() => switchMode('buyer')}>Marketplace</Link>
               <a href="/sell" className="shortcut-link active">Sell</a>
               <a href="/collections" className="shortcut-link">Collections</a>
             </div>
