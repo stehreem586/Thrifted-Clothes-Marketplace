@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { useTheme } from '../../../context/ThemeContext';
 import EditProfile from '../../../pages/EditProfile/EditProfile';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import './Navbar.css';
 import logo from '../../../assets/images/logo/logo.png';
 
@@ -17,6 +19,7 @@ const navLinks = [
 ];
 
 const Navbar = () => {
+<<<<<<< HEAD
   const { user, profile, logout } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
@@ -47,6 +50,23 @@ const Navbar = () => {
     return <div className="nb-avatar-initials">{initial}</div>;
   };
 
+=======
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
+
+  useEffect(() => {
+    setSearchQuery(searchParams.get('q') || '');
+  }, [searchParams]);
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
+>>>>>>> tehreem
   return (
     <>
       <div className="announcement-bar">
@@ -202,6 +222,7 @@ const Navbar = () => {
           </div>
         </div>
 
+<<<<<<< HEAD
         <div className="navbar-bottom">
           <ul className="nav-links">
             {navLinks.map((link) => (
@@ -212,6 +233,22 @@ const Navbar = () => {
           </ul>
         </div>
       </nav>
+=======
+        <form className="navbar-search" onSubmit={handleSearchSubmit}>
+          <input 
+            type="text" 
+            placeholder="Search outfits, brands, or categories..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <button type="submit" className="search-btn" aria-label="Search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </button>
+        </form>
+>>>>>>> tehreem
 
       {/* Edit Profile slide-in panel */}
       <EditProfile

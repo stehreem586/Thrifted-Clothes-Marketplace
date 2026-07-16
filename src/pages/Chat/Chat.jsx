@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import ChatSidebar from './chat/ChatSidebar/ChatSidebar';
 import ChatHeader from './chat/ChatHeader/ChatHeader';
 import ProductCard from './chat/ProductCard/ProductCard';
@@ -10,6 +11,7 @@ import './Chat.css';
 import product1 from '../../assets/images/products/vintage-leather-jacket.png';
 import product2 from '../../assets/images/products/blue-straigh-jeans.png';
 import product3 from '../../assets/images/products/vintage-shoulder-bag.png';
+import storefront1 from '../../assets/images/Seller-storefront/image1.png';
 
 const initialConversations = [
   {
@@ -83,6 +85,43 @@ const Chat = () => {
   const [conversations, setConversations] = useState(initialConversations);
   const [activeConversationId, setActiveConversationId] = useState(1);
   const [showTyping, setShowTyping] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.state?.startChatWith === 'CuratedByElena') {
+      setConversations(prev => {
+        if (prev.some(c => c.user.name === 'CuratedByElena')) {
+          const elenaConv = prev.find(c => c.user.name === 'CuratedByElena');
+          setActiveConversationId(elenaConv.id);
+          return prev;
+        }
+        
+        const elenaConv = {
+          id: 4,
+          user: {
+            name: 'CuratedByElena',
+            avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=150',
+            online: true
+          },
+          lastMessageText: 'Hi! Let me know if you have any questions about my listings.',
+          lastMessageTime: 'Now',
+          unreadCount: 0,
+          product: {
+            brand: '90S ARCHIVAL',
+            title: '90s Archival Silk Slip Dress',
+            price: '£145',
+            image: storefront1
+          },
+          messages: [
+            { id: 1, text: 'Hi! I saw your storefront. I love your items!', time: '10:00 AM', sender: 'me' },
+            { id: 2, text: 'Hi! Let me know if you have any questions about my listings.', time: '10:01 AM', sender: 'them' }
+          ]
+        };
+        setActiveConversationId(4);
+        return [elenaConv, ...prev];
+      });
+    }
+  }, [location.state]);
 
   const activeConversation = conversations.find(c => c.id === activeConversationId);
 
