@@ -84,6 +84,46 @@ const Chat = () => {
   const [activeConversationId, setActiveConversationId] = useState(1);
   const [showTyping, setShowTyping] = useState(false);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sellerId = params.get('sellerId');
+    const name = params.get('name');
+    const avatar = params.get('avatar');
+
+    if (sellerId && name) {
+      const numericId = isNaN(sellerId) ? sellerId : parseInt(sellerId);
+      const exists = conversations.find(c => c.id === numericId || c.user?.name === name);
+
+      if (exists) {
+        setActiveConversationId(exists.id);
+      } else {
+        const newConv = {
+          id: numericId,
+          user: {
+            name: name,
+            avatar: avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80',
+            online: true
+          },
+          lastMessageText: 'Started a new chat thread.',
+          lastMessageTime: 'Just now',
+          unreadCount: 0,
+          product: {
+            brand: 'SELLER SHOP',
+            title: 'Vintage Curated Selection',
+            price: 'Inquiry',
+            image: avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80'
+          },
+          messages: [
+            { id: Date.now(), text: `Hi ${name}! I'm interested in your listings.`, time: 'Just now', sender: 'me' }
+          ]
+        };
+
+        setConversations(prev => [newConv, ...prev]);
+        setActiveConversationId(numericId);
+      }
+    }
+  }, []);
+
   const activeConversation = conversations.find(c => c.id === activeConversationId);
 
   // Clear unread badge when selected

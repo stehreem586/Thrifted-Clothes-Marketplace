@@ -16,6 +16,7 @@ import Settings from './pages/Settings/Settings';
 import Product from './pages/Product/Product';
 import Seller from './pages/Seller/Seller';
 import ProfileSetup from './pages/ProfileSetup/ProfileSetup';
+import SellerPublicProfile from './pages/SellerPublicProfile/SellerPublicProfile';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import { useAuth } from './context/AuthContext';
 
@@ -148,6 +149,7 @@ function App() {
           <Route path="/order-history" element={<OrderHistory />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/product/:id" element={<Product />} />
+          <Route path="/seller-profile/:sellerId" element={<SellerPublicProfile />} />
         </Route>
 
         {/* Auth */}
