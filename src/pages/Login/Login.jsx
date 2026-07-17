@@ -30,7 +30,7 @@ function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  
+
   const [verificationEmail, setVerificationEmail] = useState('');
   const [forgotIdentifier, setForgotIdentifier] = useState('');
   const [otpCode, setOtpCode] = useState('');
@@ -43,15 +43,15 @@ function Login() {
   const [loadingAction, setLoadingAction] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [showDuplicateEmailPopup, setShowDuplicateEmailPopup] = useState(false);
-  
+
   const { login, signup, loginWithGoogle, user } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
-  const passwordStrength = isSignUpMode 
-    ? getPasswordStrength(password) 
-    : (isOtpMode && (otpType === 'recovery' || otpType === 'sms')) 
-      ? getPasswordStrength(newPassword) 
+  const passwordStrength = isSignUpMode
+    ? getPasswordStrength(password)
+    : (isOtpMode && (otpType === 'recovery' || otpType === 'sms'))
+      ? getPasswordStrength(newPassword)
       : null;
 
   // Listen to hash change for password recovery redirection link processing
@@ -249,7 +249,7 @@ function Login() {
 
       try {
         const result = await signup(email, password, 'customer');
-        
+
         // Detect duplicate signup
         if (result?.user?.identities?.length === 0) {
           setShowDuplicateEmailPopup(true);
@@ -305,9 +305,9 @@ function Login() {
   return (
     <div className={`merchant-login-container ${isDarkMode ? 'dark-theme' : ''}`}>
       {/* Theme Toggler at top right */}
-      <button 
-        type="button" 
-        className="theme-toggle-btn" 
+      <button
+        type="button"
+        className="theme-toggle-btn"
         onClick={toggleTheme}
         aria-label="Toggle dark mode"
       >
@@ -339,21 +339,21 @@ function Login() {
       {/* Main card */}
       <div className="merchant-login-card unified-auth-card">
         <h2>
-          {isOtpMode 
-            ? 'Verify Code' 
-            : isForgotMode 
-              ? 'Reset Password' 
-              : isSignUpMode 
-                ? 'Create an account' 
+          {isOtpMode
+            ? 'Verify Code'
+            : isForgotMode
+              ? 'Reset Password'
+              : isSignUpMode
+                ? 'Create an account'
                 : 'Welcome back'}
         </h2>
         <p className="card-instructions">
-          {isOtpMode 
+          {isOtpMode
             ? `Enter the 9-digit code sent to your ${otpType === 'sms' ? 'phone number' : 'email'}.`
             : isForgotMode
               ? 'Enter your registered email address or phone number.'
-              : isSignUpMode 
-                ? 'Sign up to shop or start selling pre-loved clothes.' 
+              : isSignUpMode
+                ? 'Sign up to shop or start selling pre-loved clothes.'
                 : 'Please enter your credentials to access your account.'}
         </p>
 
@@ -464,7 +464,7 @@ function Login() {
                     <div className="password-strength-bar" style={{ flex: 1, height: '6px', background: '#e5e0d8', borderRadius: '4px', overflow: 'hidden' }}>
                       <div
                         className={`password-strength-fill strength-${passwordStrength.level}`}
-                        style={{ 
+                        style={{
                           width: `${(passwordStrength.score / 3) * 100}%`,
                           height: '100%',
                           background: passwordStrength.level === 'weak' ? '#ef4444' : passwordStrength.level === 'good' ? '#f59e0b' : '#22c55e',
@@ -502,7 +502,12 @@ function Login() {
               ) : (
                 /* Stay signed in checkbox */
                 <div className="login-checkbox-row">
-                  <input type="checkbox" id="remember" defaultChecked />
+                  <input
+                    type="checkbox"
+                    id="remember"
+                    checked={staySignedIn}
+                    onChange={(e) => setStaySignedIn(e.target.checked)}
+                  />
                   <label htmlFor="remember">Stay signed in for 30 days</label>
                 </div>
               )}
@@ -512,12 +517,12 @@ function Login() {
           {/* Action button */}
           <button type="submit" className="login-submit-btn" disabled={loadingAction}>
             <span>
-              {loadingAction 
-                ? 'Processing...' 
-                : isOtpMode 
-                  ? 'Verify & Submit' 
-                  : isForgotMode 
-                    ? 'Send Reset Code' 
+              {loadingAction
+                ? 'Processing...'
+                : isOtpMode
+                  ? 'Verify & Submit'
+                  : isForgotMode
+                    ? 'Send Reset Code'
                     : isSignUpMode ? 'Create Account' : 'Sign In'}
             </span>
             <span className="arrow-symbol">→</span>
@@ -605,10 +610,46 @@ function Login() {
         </div>
       </div>
 
-      {/* Copyright line */}
-      <p className="login-copyright-text">
-        © 2026 SECONDLIFE CLOTHES MARKETPLACE PTY LTD
-      </p>
+      {/* Duplicate Email Popup */}
+      {showDuplicateEmailPopup && (
+        <div
+          className="duplicate-email-overlay"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+        >
+          <div
+            className="duplicate-email-modal"
+            style={{
+              background: 'var(--card-bg, #fff)',
+              borderRadius: '12px',
+              padding: '24px',
+              maxWidth: '360px',
+              width: '90%',
+              textAlign: 'center',
+            }}
+          >
+            <h3 style={{ marginBottom: '8px' }}>Account Already Exists</h3>
+            <p style={{ marginBottom: '20px', fontSize: '14px', color: 'var(--text-muted)' }}>
+              An account with this email already exists. Please log in instead.
+            </p>
+            <button
+              type="button"
+              className="login-submit-btn"
+              style={{ width: '100%' }}
+              onClick={handleGoToLoginFromPopup}
+            >
+              Go to Login
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

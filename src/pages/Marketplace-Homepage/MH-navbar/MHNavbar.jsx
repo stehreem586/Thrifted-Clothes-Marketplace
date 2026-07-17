@@ -1,19 +1,34 @@
-import React, { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { useTheme } from '../../../context/ThemeContext';
 import EditProfile from '../../../pages/EditProfile/EditProfile';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import './MHNavbar.css';
 
 const MHNavbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const currentPath = location.pathname;
-  const [showProfileMenu, setShowProfileMenu]     = useState(false);
-  const [showEditProfile, setShowEditProfile]     = useState(false);
-  const [selectedLocation, setSelectedLocation]   = useState('Pakistan');
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState('Pakistan');
   const { user, profile, logout, switchMode } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
+
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
+
+  // Sync searchQuery state with the query param in the URL
+  useEffect(() => {
+    setSearchQuery(searchParams.get('q') || '');
+  }, [searchParams]);
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
 
   const handleSellClick = () => {
     switchMode('seller');
@@ -37,13 +52,7 @@ const MHNavbar = () => {
   // Avatar display: photo → initials → icon
   const renderAvatar = () => {
     if (profile?.avatar_url) {
-      return (
-        <img
-          src={profile.avatar_url}
-          alt="Profile"
-          className="mh-avatar-img"
-        />
-      );
+      return <img src={profile.avatar_url} alt="Profile" className="mh-avatar-img" />;
     }
     const initial = (profile?.name || user?.email || '?').charAt(0).toUpperCase();
     return <div className="mh-avatar-initials">{initial}</div>;
@@ -55,22 +64,27 @@ const MHNavbar = () => {
         <div className="mh-navbar-container">
           {/* Brand logo */}
           <div className="mh-navbar-brand">
-            <Link to="/" className="mh-brand-logo">
-              SecondLife
-            </Link>
+            <Link to="/" className="mh-brand-logo">SecondLife</Link>
           </div>
 
           {/* Search bar + Location */}
           <div className="mh-search-wrapper">
-            <div className="mh-search-container">
-              <svg className="mh-search-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              </svg>
+            <form className="mh-search-container" onSubmit={handleSearchSubmit}>
+              <button
+                type="submit"
+                style={{ background: 'none', border: 'none', padding: 0, display: 'flex', alignItems: 'center', cursor: 'pointer', color: 'inherit' }}
+              >
+                <svg className="mh-search-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+              </button>
               <input
                 type="text"
                 placeholder="Search pre-loved items..."
                 className="mh-search-input"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
               <div className="mh-search-divider"></div>
               <div className="mh-location-picker">
@@ -83,7 +97,7 @@ const MHNavbar = () => {
                   <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>
               </div>
-            </div>
+            </form>
           </div>
 
           {/* Links & Actions */}
@@ -101,6 +115,10 @@ const MHNavbar = () => {
                 <Link to="/saved">Saved</Link>
                 {currentPath === '/saved' && <span className="mh-active-indicator"></span>}
               </li>
+              <li className={`mh-nav-item ${currentPath.startsWith('/chat') ? 'active' : ''}`}>
+                <Link to="/chat">Chat</Link>
+                {currentPath.startsWith('/chat') && <span className="mh-active-indicator"></span>}
+              </li>
               <li className={`mh-nav-item ${currentPath.startsWith('/order-history') ? 'active' : ''}`}>
                 <Link to="/order-history">Orders</Link>
                 {currentPath.startsWith('/order-history') && <span className="mh-active-indicator"></span>}
@@ -114,6 +132,7 @@ const MHNavbar = () => {
                   <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
                 </svg>
               </button>
+
               <button className="mh-icon-btn" aria-label="Messages">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
@@ -132,11 +151,7 @@ const MHNavbar = () => {
               </button>
 
               {/* Dark Mode Toggle */}
-              <button 
-                className="mh-icon-btn mh-theme-toggle" 
-                onClick={toggleTheme} 
-                aria-label="Toggle dark mode"
-              >
+              <button className="mh-icon-btn mh-theme-toggle" onClick={toggleTheme} aria-label="Toggle dark mode">
                 {isDarkMode ? (
                   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="5"></circle>
@@ -168,7 +183,6 @@ const MHNavbar = () => {
 
                 {showProfileMenu && (
                   <div className="mh-profile-dropdown">
-                    {/* Dropdown header with avatar */}
                     <div className="mh-dropdown-header">
                       <div className="mh-dropdown-avatar">
                         {profile?.avatar_url ? (
@@ -184,18 +198,12 @@ const MHNavbar = () => {
                           {profile?.name || user?.email?.split('@')[0] || 'User'}
                         </p>
                         <p className="mh-user-email">{user?.email || ''}</p>
-                        {profile?.city && (
-                          <p className="mh-user-city">📍 {profile.city}</p>
-                        )}
+                        {profile?.city && <p className="mh-user-city">📍 {profile.city}</p>}
                       </div>
                     </div>
                     <div className="mh-dropdown-divider"></div>
 
-                    {/* Edit Profile — opens slide-in panel */}
-                    <button
-                      className="mh-dropdown-item"
-                      onClick={handleOpenEdit}
-                    >
+                    <button className="mh-dropdown-item" onClick={handleOpenEdit}>
                       <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 8 }}>
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
@@ -237,10 +245,7 @@ const MHNavbar = () => {
       </nav>
 
       {/* Edit Profile slide-in panel */}
-      <EditProfile
-        isOpen={showEditProfile}
-        onClose={() => setShowEditProfile(false)}
-      />
+      <EditProfile isOpen={showEditProfile} onClose={() => setShowEditProfile(false)} />
     </>
   );
 };
