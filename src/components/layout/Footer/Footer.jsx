@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import './Footer.css';
-import logo from '../../../assets/images/footer-logo.png';
+import Logo from '../../common/Logo/Logo';
 import playIcon from '../../../assets/icons/Google-play-icon.avif';
 import appleIcon from '../../../assets/icons/apple-icon.jpg';
 
@@ -12,13 +12,7 @@ const Footer = () => {
         
         {/* Brand Section */}
         <div className="footer-brand">
-          <Link to="/" className="footer-logo">
-            <img src={logo} alt="SecondLife Logo" className="footer-logo-img" />
-            <div className="footer-logo-text">
-              <span className="footer-brand-name">SecondLife</span>
-              <span className="footer-brand-tagline">REUSE. RESTYLE. RELIVE.</span>
-            </div>
-          </Link>
+          <Logo variant="footer" size="medium" />
           <p className="brand-description">
             A community marketplace for buying and selling pre-loved fashion.
           </p>

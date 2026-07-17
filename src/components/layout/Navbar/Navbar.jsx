@@ -4,7 +4,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useTheme } from '../../../context/ThemeContext';
 import EditProfile from '../../../pages/EditProfile/EditProfile';
 import './Navbar.css';
-import logo from '../../../assets/images/logo/logo.png';
+import Logo from '../../common/Logo/Logo';
 
 const navLinks = [
   { name: 'New Arrivals', href: '#', isActive: true },
@@ -73,13 +73,7 @@ const Navbar = () => {
       <nav className="navbar-container">
         <div className="navbar-top">
           <div className="navbar-logo">
-            <Link to="/">
-              <img src={logo} alt="SecondLife Logo" />
-              <div className="logo-text">
-                <span className="brand-name">SecondLife</span>
-                <span className="brand-tagline">REUSE. RESTYLE. RELIVE.</span>
-              </div>
-            </Link>
+            <Logo size="medium" />
           </div>
 
           <form className="navbar-search" onSubmit={handleSearchSubmit}>
