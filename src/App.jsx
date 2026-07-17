@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Outlet, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import Navbar from './components/layout/Navbar/Navbar';
@@ -61,7 +60,7 @@ function HomeRouter() {
 // Redirect away if profile is already complete
 function ProfileSetupGuard() {
   const { user, profile, loading, isProfileComplete } = useAuth();
-  if (loading) return <LoadingSpinner />;
+  if (loading) return <div>Loading...</div>;
   if (!user) return <Navigate to="/login" replace />;
   if (isProfileComplete(profile)) return <Navigate to="/" replace />;
   return <ProfileSetup />;
@@ -106,7 +105,7 @@ function App() {
     <Router>
       <ModeRedirectAndToast />
       <Routes>
-        {/* Public routes */}
+        {/* Public / customer routes — wrapped in MainLayout (navbar + footer) */}
         <Route element={<MainLayout />}>
           <Route path="/" element={<HomeRouter />} />
           <Route path="/shop" element={<Shop />} />
@@ -119,25 +118,14 @@ function App() {
           <Route path="/storefront" element={<Storefront />} />
           <Route path="/seller-profile/:sellerId" element={<SellerPublicProfile />} />
         </Route>
+
         <Route path="/login" element={<Login />} />
         <Route path="/seller" element={<Seller />} />
 
-        {/* Admin portal — all inside AdminLayout */}
-        <Route path="/admin" element={<AdminLayout />}>
         {/* One-time profile setup — shown after first signup, skipped if complete */}
         <Route path="/profile-setup" element={<ProfileSetupGuard />} />
 
-        {/* Seller/Merchant portal - protected */}
-        <Route
-          path="/seller"
-          element={
-            <ProtectedRoute allowedRoles={['merchant', 'admin', 'customer']}>
-              <Seller />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Admin portal — protected and inside AdminLayout */}
+        {/* Admin portal — protected, nested under AdminLayout */}
         <Route
           path="/admin"
           element={
