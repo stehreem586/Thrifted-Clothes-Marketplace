@@ -36,7 +36,8 @@ import AdminSettings from './pages/Admin/Settings';
 import './App.css';
 
 function MainLayout() {
-  const userRole = localStorage.getItem('userRole');
+  const { user, profile } = useAuth();
+  const userRole = user ? (profile?.role || user?.user_metadata?.role || localStorage.getItem('userRole') || 'customer') : null;
   return (
     <div className="app-wrapper" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       {userRole === 'customer' ? <MHNavbar /> : <Navbar />}
@@ -49,7 +50,8 @@ function MainLayout() {
 }
 
 function HomeRouter() {
-  const userRole = localStorage.getItem('userRole');
+  const { user, profile } = useAuth();
+  const userRole = user ? (profile?.role || user?.user_metadata?.role || localStorage.getItem('userRole') || 'customer') : null;
   if (userRole === 'customer') {
     return <MarketplaceHomepage />;
   }
@@ -68,20 +70,28 @@ function ProfileSetupGuard() {
 
 /* ─── Mode Redirect & Global Toast ───────────────────────── */
 function ModeRedirectAndToast() {
-  const { user, userMode, switchMode, toast } = useAuth();
+  const { user, profile, loading, isProfileComplete, userMode, switchMode, toast } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
+    if (loading) return;
+
     if (user) {
-      const savedMode = localStorage.getItem('userMode') || 'buyer';
-      if (savedMode === 'seller' && location.pathname === '/') {
+      // 1. Check if profile setup is required
+      if (!isProfileComplete(profile)) {
+        if (location.pathname !== '/profile-setup' && location.pathname !== '/login') {
+          navigate('/profile-setup', { replace: true });
+          return;
+        }
+      }
+
+      // 2. Mode redirect — use reactive userMode state (not localStorage) to avoid stale reads
+      if (userMode === 'seller' && location.pathname === '/') {
         navigate('/seller', { replace: true });
-      } else if (savedMode === 'buyer' && location.pathname === '/seller') {
-        switchMode('seller');
       }
     }
-  }, [user, location.pathname, navigate]);
+  }, [user, profile, loading, userMode, location.pathname, navigate, isProfileComplete]);
 
   if (!toast.show) return null;
 

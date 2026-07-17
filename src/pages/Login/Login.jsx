@@ -44,7 +44,7 @@ function Login() {
   const [resendLoading, setResendLoading] = useState(false);
   const [showDuplicateEmailPopup, setShowDuplicateEmailPopup] = useState(false);
 
-  const { login, signup, loginWithGoogle, user } = useAuth();
+  const { login, signup, loginWithGoogle, user, profile, loading, isProfileComplete } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
@@ -73,14 +73,18 @@ function Login() {
 
   // If user is already authenticated (e.g. after clicking email confirmation link), redirect them
   useEffect(() => {
-    if (user) {
+    if (user && !loading) {
       // Check if they came from password recovery hash
       const isRecovering = window.location.hash.includes('type=recovery');
       if (!isRecovering) {
-        navigate('/');
+        if (!isProfileComplete(profile)) {
+          navigate('/profile-setup', { replace: true });
+        } else {
+          navigate('/', { replace: true });
+        }
       }
     }
-  }, [user, navigate]);
+  }, [user, profile, loading, navigate, isProfileComplete]);
 
   const handleModeSwitch = () => {
     setIsSignUpMode(prev => !prev);
@@ -190,9 +194,7 @@ function Login() {
         } else {
           // signup confirmation
           setSuccessMsg('Email verified successfully! Redirecting to profile setup...');
-          setTimeout(() => {
-            navigate('/profile-setup');
-          }, 1500);
+          navigate('/profile-setup');
         }
       } catch (err) {
         setErrorMsg(err.message || 'Verification failed. Please check the code.');
@@ -277,7 +279,6 @@ function Login() {
         const data = await login(email, password, staySignedIn);
         const userRole = data.user?.user_metadata?.role || 'customer';
         localStorage.setItem('userRole', userRole);
-        navigate('/');
       } catch (err) {
         if (err.message === 'Email not confirmed') {
           setErrorMsg('Your email is not verified yet. We have enabled code verification below.');
