@@ -1,18 +1,64 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import './Seller.css';
 import SellerDashboard from './SellerDashboard';
 import Inventory from './Inventory';
 import OrderHistory from './OrderHistory';
+import SellerProfile from './SellerProfile';
 
 function Seller() {
+  const { switchMode, user, profile } = useAuth();
   const [activeTab, setActiveTab] = useState('inventory');
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const dropdownRef = useRef(null);
 
   // Search states (passed down to sub-views)
   const [dashboardSearch, setDashboardSearch] = useState('');
   const [inventorySearch, setInventorySearch] = useState('');
   const [ordersSearch, setOrdersSearch] = useState('');
 
-  const switchTab = (tab) => setActiveTab(tab);
+  const switchTab = (tab) => {
+    setActiveTab(tab);
+    setShowProfileMenu(false);
+  };
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setShowProfileMenu(false);
+      }
+    };
+    if (showProfileMenu) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [showProfileMenu]);
+
+  // Close dropdown on Escape key
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (e.key === 'Escape') setShowProfileMenu(false);
+    };
+    if (showProfileMenu) document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [showProfileMenu]);
+
+  // Avatar display fallback
+  const renderAvatar = () => {
+    if (profile?.avatar_url) {
+      return (
+        <img
+          src={profile.avatar_url}
+          alt="Profile"
+          className="mh-avatar-img"
+        />
+      );
+    }
+    const initial = (profile?.name || user?.email || '?').charAt(0).toUpperCase();
+    return <div className="mh-avatar-initials">{initial}</div>;
+  };
 
   return (
     <div className="dashboard-container">
@@ -31,10 +77,16 @@ function Seller() {
 
         <div className="seller-profile-card">
           <div className="profile-avatar">
-            <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&q=80" alt="Seller Avatar" />
+            {profile?.avatar_url ? (
+              <img src={profile.avatar_url} alt="Seller Avatar" />
+            ) : (
+              <div className="mh-avatar-initials" style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#c19358', color: '#fff', fontSize: 16, fontWeight: 'bold' }}>
+                {(profile?.name || user?.email || '?').charAt(0).toUpperCase()}
+              </div>
+            )}
           </div>
           <div className="profile-info">
-            <h4>Seller Panel</h4>
+            <h4>{profile?.name || user?.email?.split('@')[0] || 'Seller Store'}</h4>
             <span className="manage-badge">Manage Brand store</span>
           </div>
         </div>
@@ -51,16 +103,12 @@ function Seller() {
             { key: 'history', label: 'History', icon: (
               <><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>
             )},
+            { key: 'profile', label: 'Store Profile', icon: (
+              <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>
+            )},
             { key: 'sales', label: 'Sales', icon: (
               <><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></>
             )},
-            // { key: 'messages', label: 'Messages', icon: (
-            //   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-            // )},
-            // { key: 'community', label: 'Community', icon: (
-            //   <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-            //     <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>
-            // )},
           ].map(({ key, label, icon }) => (
             <button
               key={key}
@@ -75,10 +123,6 @@ function Seller() {
           ))}
         </nav>
 
-        {/* <button className="sidebar-action-btn" onClick={() => switchTab('inventory')}>
-          Create Listing
-        </button> */}
-
         <div className="seller-sidebar-footer">
           <button className="footer-nav-item">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
@@ -87,12 +131,12 @@ function Seller() {
             </svg>
             Help Center
           </button>
-          <button className="footer-nav-item logout">
+          <button className="footer-nav-item logout" onClick={() => switchMode('buyer')}>
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
               <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
             </svg>
-            Logout
+            Switch to Buyer
           </button>
         </div>
       </aside>
@@ -125,7 +169,7 @@ function Seller() {
 
           <div className="header-actions">
             <div className="header-nav-shortcuts">
-              <a href="/" className="shortcut-link">Marketplace</a>
+              <Link to="/" className="shortcut-link" onClick={() => switchMode('buyer')}>Marketplace</Link>
               <a href="/sell" className="shortcut-link active">Sell</a>
               <a href="/collections" className="shortcut-link">Collections</a>
             </div>
@@ -140,15 +184,57 @@ function Seller() {
                 <polyline points="22,6 12,13 2,6"/>
               </svg>
             </button>
-            <button className="icon-btn settings-btn">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="3"/>
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-              </svg>
-            </button>
-            <div className="user-profile-avatar">
-              <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&q=80" alt="Avatar" />
+
+            {/* Profile Avatar Button + Dropdown (Matching Buyer Dropdown Structure but without settings & logout) */}
+            <div className="mh-profile-container" ref={dropdownRef}>
+              <button
+                className="mh-avatar-btn"
+                aria-label="Profile Menu"
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+              >
+                {renderAvatar()}
+              </button>
+
+              {showProfileMenu && (
+                <div className="mh-profile-dropdown" style={{ right: 0, top: '45px' }}>
+                  {/* Dropdown header with avatar */}
+                  <div className="mh-dropdown-header">
+                    <div className="mh-dropdown-avatar">
+                      {profile?.avatar_url ? (
+                        <img src={profile.avatar_url} alt="Avatar" className="mh-dropdown-avatar-img" />
+                      ) : (
+                        <div className="mh-dropdown-avatar-initials">
+                          {(profile?.name || user?.email || '?').charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <p className="mh-user-name">
+                        {profile?.name || user?.email?.split('@')[0] || 'Seller Store'}
+                      </p>
+                      <p className="mh-user-email">{user?.email || ''}</p>
+                      {profile?.city && (
+                        <p className="mh-user-city">📍 {profile.city}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="mh-dropdown-divider"></div>
+
+                  {/* View Selling Profile — switches to profile tab */}
+                  <button
+                    className="mh-dropdown-item"
+                    onClick={() => switchTab('profile')}
+                  >
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 8 }}>
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                    </svg>
+                    View Selling Profile
+                  </button>
+                </div>
+              )}
             </div>
+
           </div>
         </header>
 
@@ -163,6 +249,10 @@ function Seller() {
 
         {activeTab === 'history' && (
           <OrderHistory ordersSearch={ordersSearch} />
+        )}
+
+        {activeTab === 'profile' && (
+          <SellerProfile />
         )}
 
         {/* Placeholder views for other tabs */}

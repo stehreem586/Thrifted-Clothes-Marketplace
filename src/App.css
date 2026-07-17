@@ -192,10 +192,20 @@ html.dark .mh-nav-item.active a {
   color: #c19358 !important;
 }
 
-html.dark .navbar-search input,
-html.dark .mh-search-input {
+html.dark .navbar-search input {
   background-color: #18181b !important;
   border-color: #3f3f46 !important;
+  color: #f4f4f5 !important;
+}
+
+html.dark .mh-search-container {
+  background-color: #18181b !important;
+  border-color: #3f3f46 !important;
+}
+
+html.dark .mh-search-input {
+  background-color: transparent !important;
+  border: none !important;
   color: #f4f4f5 !important;
 }
 
@@ -507,3 +517,238 @@ html.dark input::placeholder,
 html.dark textarea::placeholder {
   color: #71717a !important;
 }
+
+/* ---- Global Toast ---- */
+.global-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.toast-inner {
+  display: flex;
+  align-items: center;
+  background-color: #1c1c1e;
+  color: #ffffff;
+  padding: 12px 20px;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  animation: toast-slide-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+html.dark .toast-inner {
+  background-color: #f4f4f5;
+  color: #0d0d0f;
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+@keyframes toast-slide-in {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* ==========================================================================
+   SELLER PORTAL DARK MODE OVERRIDES
+   ========================================================================== */
+html.dark .dashboard-container {
+  background-color: #0d0d0f !important;
+  color: #f4f4f5 !important;
+}
+
+html.dark .seller-sidebar {
+  background-color: #111113 !important;
+  border-color: #27272a !important;
+}
+
+html.dark .seller-profile-card {
+  background-color: #18181b !important;
+}
+
+html.dark .seller-profile-card h4 {
+  color: #f4f4f5 !important;
+}
+
+html.dark .nav-item {
+  color: #a1a1aa !important;
+}
+
+html.dark .nav-item:hover,
+html.dark .footer-nav-item:hover {
+  background-color: #18181b !important;
+  color: #f4f4f5 !important;
+}
+
+html.dark .nav-item.active {
+  background-color: #c19358 !important;
+  color: #ffffff !important;
+}
+
+html.dark .seller-header {
+  background-color: #111113 !important;
+  border-color: #27272a !important;
+}
+
+html.dark .header-search {
+  background-color: #18181b !important;
+  border-color: #27272a !important;
+}
+
+html.dark .header-search input {
+  color: #f4f4f5 !important;
+}
+
+html.dark .shortcut-link {
+  color: #a1a1aa !important;
+}
+
+html.dark .shortcut-link:hover,
+html.dark .shortcut-link.active {
+  color: #f4f4f5 !important;
+  border-bottom-color: #f4f4f5 !important;
+}
+
+html.dark .icon-btn:hover {
+  background-color: #18181b !important;
+  color: #f4f4f5 !important;
+}
+
+/* Tables and cards */
+html.dark .seller-table th {
+  background-color: #18181b !important;
+  color: #a1a1aa !important;
+  border-color: #27272a !important;
+}
+
+html.dark .seller-table td {
+  color: #e4e4e7 !important;
+  border-color: #27272a !important;
+}
+
+html.dark .seller-table tbody tr:hover {
+  background-color: #18181b !important;
+}
+
+html.dark .table-footer-pagination,
+html.dark .showing-indicator {
+  background-color: #18181b !important;
+  color: #a1a1aa !important;
+  border-color: #27272a !important;
+}
+
+html.dark .pagination-btn {
+  background-color: #111113 !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+
+html.dark .pagination-btn:hover:not(:disabled) {
+  background-color: #18181b !important;
+  border-color: #3f3f46 !important;
+}
+
+html.dark .pagination-btn.active {
+  background-color: #c19358 !important;
+  color: #ffffff !important;
+  border-color: #c19358 !important;
+}
+
+html.dark .stat-card,
+html.dark .dashboard-chart-card,
+html.dark .dashboard-categories-card,
+html.dark .recent-sales-card,
+html.dark .metric-card-styled,
+html.dark .listings-table-card,
+html.dark .photos-upload-card,
+html.dark .form-right-col > div,
+html.dark .seller-stats-card-main,
+html.dark .seller-profile-form-panel {
+  background-color: #111113 !important;
+  border-color: #27272a !important;
+}
+
+html.dark .seller-stats-card-main h3,
+html.dark .seller-profile-form-panel h1,
+html.dark .seller-profile-form-panel h3 {
+  color: #f4f4f5 !important;
+}
+
+html.dark .seller-stat-summary-item {
+  background-color: #18181b !important;
+}
+
+html.dark .empty-state-row {
+  background-color: #111113 !important;
+  color: #a1a1aa !important;
+}
+
+html.dark .tab-count {
+  background-color: #27272a !important;
+  color: #a1a1aa !important;
+}
+
+html.dark .filter-tab.active .tab-count {
+  background-color: #c19358 !important;
+  color: #ffffff !important;
+}
+
+html.dark .clean-select {
+  background-color: #111113 !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+
+html.dark .metric-horizontal-bar {
+  background-color: #27272a !important;
+}
+
+html.dark .cover-photo-upload-box {
+  background-color: #18181b !important;
+  border-color: #3f3f46 !important;
+}
+
+html.dark .cover-photo-upload-box:hover {
+  background-color: #27272a !important;
+  border-color: #c19358 !important;
+}
+
+html.dark .small-photo-upload-item {
+  background-color: #18181b !important;
+  border-color: #27272a !important;
+}
+
+html.dark .form-section-card {
+  background-color: #111113 !important;
+  border-color: #27272a !important;
+}
+
+html.dark .form-section-card h3 {
+  color: #f4f4f5 !important;
+}
+
+html.dark .status-pill.active-listing {
+  background-color: #78350f !important;
+  color: #fde68a !important;
+}
+
+html.dark .status-pill.sold-listing,
+html.dark .status-pill.draft-listing {
+  background-color: #27272a !important;
+  color: #a1a1aa !important;
+}
+
+html.dark .action-icon-btn:hover {
+  background-color: #27272a !important;
+}
+

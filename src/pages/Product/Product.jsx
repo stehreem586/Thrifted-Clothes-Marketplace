@@ -59,6 +59,10 @@ const Product = () => {
 
   const handleChatClick = () => {
     navigate('/chat', { state: { startChatWith: sellerInfo.name } });
+    const sellerSlug = currentProduct.seller?.name ? 
+      currentProduct.seller.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '') : 'vintage-vibes';
+    const targetSlug = sellerSlug.includes('elena') ? 'elena-archive' : sellerSlug;
+    navigate(`/seller-profile/${targetSlug}`);
   };
 
   const handleBuyNow = () => {
@@ -178,7 +182,16 @@ const Product = () => {
           </div>
 
           {/* Seller Profile Card */}
-          <div className="detail-seller-card" onClick={() => navigate('/storefront')} style={{ cursor: 'pointer' }}>
+          <div 
+            className="detail-seller-card" 
+            onClick={() => {
+              const sellerSlug = currentProduct.seller?.name ? 
+                currentProduct.seller.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '') : 'vintage-vibes';
+              const targetSlug = sellerSlug.includes('elena') ? 'elena-archive' : sellerSlug;
+              navigate(`/seller-profile/${targetSlug}`);
+            }} 
+            style={{ cursor: 'pointer' }}
+          >
             <div className="seller-avatar-wrapper">
               <img src={sellerInfo.avatar} alt={sellerInfo.name} className="seller-avatar-img" />
             </div>

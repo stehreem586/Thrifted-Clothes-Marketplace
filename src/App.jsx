@@ -1,5 +1,6 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
+
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Outlet, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import Navbar from './components/layout/Navbar/Navbar';
 import Footer from './components/layout/Footer/Footer';
 import Home from './pages/Home/Home';
@@ -16,6 +17,10 @@ import Product from './pages/Product/Product';
 import Storefront from './pages/Storefront/Storefront';
 import SearchResults from './pages/SearchResults/SearchResults';
 import Seller from './pages/Seller/Seller';
+import ProfileSetup from './pages/ProfileSetup/ProfileSetup';
+import SellerPublicProfile from './pages/SellerPublicProfile/SellerPublicProfile';
+import ProtectedRoute from './components/common/ProtectedRoute';
+import { useAuth } from './context/AuthContext';
 
 // Admin layout + pages
 import AdminLayout from './pages/Admin/AdminLayout';
@@ -52,9 +57,54 @@ function HomeRouter() {
   return <Home />;
 }
 
+/* ─── Profile Setup Guard ─────────────────────────────────── */
+// Redirect away if profile is already complete
+function ProfileSetupGuard() {
+  const { user, profile, loading, isProfileComplete } = useAuth();
+  if (loading) return <LoadingSpinner />;
+  if (!user) return <Navigate to="/login" replace />;
+  if (isProfileComplete(profile)) return <Navigate to="/" replace />;
+  return <ProfileSetup />;
+}
+
+/* ─── Mode Redirect & Global Toast ───────────────────────── */
+function ModeRedirectAndToast() {
+  const { user, userMode, switchMode, toast } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (user) {
+      const savedMode = localStorage.getItem('userMode') || 'buyer';
+      if (savedMode === 'seller' && location.pathname === '/') {
+        navigate('/seller', { replace: true });
+      } else if (savedMode === 'buyer' && location.pathname === '/seller') {
+        switchMode('seller');
+      }
+    }
+  }, [user, location.pathname, navigate]);
+
+  if (!toast.show) return null;
+
+  return (
+    <div className="global-toast">
+      <div className="toast-inner">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 8 }}>
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 8v4" />
+          <path d="M12 16h.01" />
+        </svg>
+        <span>{toast.message}</span>
+      </div>
+    </div>
+  );
+}
+
+/* ─── App ─────────────────────────────────────────────────── */
 function App() {
   return (
     <Router>
+      <ModeRedirectAndToast />
       <Routes>
         {/* Public routes */}
         <Route element={<MainLayout />}>
@@ -67,12 +117,35 @@ function App() {
           <Route path="/settings" element={<Settings />} />
           <Route path="/product/:id" element={<Product />} />
           <Route path="/storefront" element={<Storefront />} />
+          <Route path="/seller-profile/:sellerId" element={<SellerPublicProfile />} />
         </Route>
         <Route path="/login" element={<Login />} />
         <Route path="/seller" element={<Seller />} />
 
         {/* Admin portal — all inside AdminLayout */}
         <Route path="/admin" element={<AdminLayout />}>
+        {/* One-time profile setup — shown after first signup, skipped if complete */}
+        <Route path="/profile-setup" element={<ProfileSetupGuard />} />
+
+        {/* Seller/Merchant portal - protected */}
+        <Route
+          path="/seller"
+          element={
+            <ProtectedRoute allowedRoles={['merchant', 'admin', 'customer']}>
+              <Seller />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Admin portal — protected and inside AdminLayout */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<AdminDashboard />} />
           <Route path="sellers" element={<Sellers />} />
           <Route path="inventory" element={<Inventory />} />
