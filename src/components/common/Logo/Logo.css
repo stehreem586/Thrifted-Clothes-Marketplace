@@ -1,0 +1,145 @@
+/* Brand Logo Component Styles */
+
+.brand-logo-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  gap: 12px;
+  transition: opacity 0.2s ease;
+  user-select: none;
+}
+
+.brand-logo-link:hover {
+  opacity: 0.9;
+}
+
+/* Image Wrapper (No fixed boxes/overflow: hidden, just display flex) */
+.brand-logo-image-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible; /* Allow scaled image to render fully without cropping */
+  position: relative;
+}
+
+.brand-logo-img {
+  width: auto;
+  object-fit: contain;
+  transform-origin: center;
+}
+
+/* Text Container */
+.brand-logo-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 1.1;
+  z-index: 10;
+}
+
+.brand-logo-name {
+  font-family: 'Playfair Display', 'Times New Roman', serif;
+  font-weight: 700;
+  color: #111111;
+  line-height: 1.1;
+  letter-spacing: -0.5px;
+}
+
+.brand-logo-tagline {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 700;
+  color: #333333;
+  margin-top: 4px;
+  text-transform: uppercase;
+}
+
+/* --- SIZE VARIATIONS (For Default/Marketplace variant, scale factor 1.8) --- */
+
+/* Small Size */
+.brand-logo-link.small:not(.footer) .brand-logo-img {
+  height: 26px;
+  transform: scale(1.8);
+  margin-left: 8px;
+  margin-right: 8px;
+}
+
+.brand-logo-link.small .brand-logo-name {
+  font-size: 20px;
+}
+
+.brand-logo-link.small .brand-logo-tagline {
+  font-size: 7px;
+  letter-spacing: 1.2px;
+  margin-top: 2px;
+}
+
+/* Medium Size (Default) */
+.brand-logo-link.medium:not(.footer) .brand-logo-img {
+  height: 60px;
+  transform: scale(1.8);
+  margin-left: 20px;
+  margin-right: 20px;
+}
+
+.brand-logo-link.medium .brand-logo-name {
+  font-size: 28px;
+}
+
+.brand-logo-link.medium .brand-logo-tagline {
+  font-size: 9px;
+  letter-spacing: 1.8px;
+  margin-top: 4px;
+}
+
+/* Large Size */
+.brand-logo-link.large:not(.footer) .brand-logo-img {
+  height: 72px;
+  transform: scale(1.8);
+  margin-left: 24px;
+  margin-right: 24px;
+}
+
+.brand-logo-link.large .brand-logo-name {
+  font-size: 32px;
+}
+
+.brand-logo-link.large .brand-logo-tagline {
+  font-size: 10px;
+  letter-spacing: 2px;
+  margin-top: 4px;
+}
+
+/* --- THEME / VARIANT STYLING --- */
+
+/* Footer Variant (Uses footer-logo.png with scale factor 1.8) */
+.brand-logo-link.footer .brand-logo-name {
+  color: #ffffff;
+}
+
+.brand-logo-link.footer .brand-logo-tagline {
+  color: #d8a25c;
+}
+
+/* Small Footer Image Scaling */
+.brand-logo-link.footer.small .brand-logo-img {
+  height: 48px;
+  transform: scale(1.8);
+  margin-left: 14px;
+  margin-right: 14px;
+}
+
+/* Medium Footer Image Scaling */
+.brand-logo-link.footer.medium .brand-logo-img {
+  height: 70px;
+  transform: scale(1.8);
+  margin-left: 22px;
+  margin-right: 22px;
+}
+
+/* Large Footer Image Scaling */
+.brand-logo-link.footer.large .brand-logo-img {
+  height: 56px;
+  transform: scale(1.8);
+  margin-left: 18px;
+  margin-right: 18px;
+}

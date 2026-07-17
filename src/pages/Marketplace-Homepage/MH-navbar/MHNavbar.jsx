@@ -4,6 +4,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import EditProfile from '../../../pages/EditProfile/EditProfile';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import './MHNavbar.css';
+import Logo from '../../../components/common/Logo/Logo';
 
 const MHNavbar = () => {
   const navigate = useNavigate();
@@ -64,7 +65,7 @@ const MHNavbar = () => {
         <div className="mh-navbar-container">
           {/* Brand logo */}
           <div className="mh-navbar-brand">
-            <Link to="/" className="mh-brand-logo">SecondLife</Link>
+            <Logo size="medium" />
           </div>
 
           {/* Search bar + Location */}

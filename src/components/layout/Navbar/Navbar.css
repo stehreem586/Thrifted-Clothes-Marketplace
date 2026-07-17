@@ -12,6 +12,12 @@
   width: 100%;
 }
 
+.navbar-logo {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
 .announcement-bar svg {
   flex-shrink: 0;
 }
@@ -36,45 +42,7 @@
   gap: 2rem;
 }
 
-.navbar-logo a {
-  display: flex;
-  align-items: center;
-  text-decoration: none;
-  gap: 12px;
-}
-
-.navbar-logo img {
-  height: 64px;
-  transform: scale(7.5);
-  margin-left: 64px;
-  margin-right: 48px;
-  object-fit: contain;
-}
-
-.logo-text {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  line-height: 1.1;
-}
-
-.brand-name {
-  font-family: 'Playfair Display', 'Times New Roman', serif;
-  font-size: 28px;
-  font-weight: 700;
-  color: #111;
-  line-height: 1.1;
-  letter-spacing: -0.5px;
-}
-
-.brand-tagline {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 1.8px;
-  color: #333;
-  margin-top: 4px;
-}
+/* Logo is styled via common Logo component */
 
 .navbar-search {
   flex: 1;
