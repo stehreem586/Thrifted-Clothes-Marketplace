@@ -1,67 +1,53 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useListings } from '../../context/ListingsContext';
 import './OrderHistory.css';
 
-const initialOrders = [
-  {
-    id: '#SL-3512-V',
-    title: 'Vintage Heritage Trench',
-    details: 'Size M • Beige',
-    buyerName: 'Eleanor Vance',
-    buyerLocation: 'Paris, France',
-    price: 450.00,
-    date: 'Oct 28, 2023',
-    status: 'Delivered',
-    image: 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400&q=80'
-  },
-  {
-    id: '#SL-3580-L',
-    title: 'Minimalist Leather Sneaker',
-    details: 'Size 42 • White',
-    buyerName: 'Julien Thorne',
-    buyerLocation: 'Copenhagen, DK',
-    price: 155.00,
-    date: 'Oct 26, 2023',
-    status: 'In Transit',
-    image: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&q=80'
-  },
-  {
-    id: '#SL-3542-W',
-    title: 'Hand-Painted Silk Scarf',
-    details: 'OS • Forest Green',
-    buyerName: 'Sophia Rossi',
-    buyerLocation: 'Milan, Italy',
-    price: 120.00,
-    date: 'Oct 25, 2023',
-    status: 'Pending',
-    image: 'https://images.unsplash.com/photo-1601924994987-69e26d50dc26?w=400&q=80'
-  },
-  {
-    id: '#SL-3345-A',
-    title: 'Recycled Cashmere Knit',
-    details: 'Size S • Charcoal',
-    buyerName: 'Marcus Walsh',
-    buyerLocation: 'London, UK',
-    price: 210.00,
-    date: 'Oct 23, 2023',
-    status: 'Delivered',
-    image: 'https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=400&q=80'
-  }
-];
-
 function OrderHistory({ ordersSearch }) {
-  const [orders] = useState(initialOrders);
+  const { orders } = useListings();
+  const [statusFilter, setStatusFilter] = useState('All');
 
-  const filtered = orders.filter(order => {
-    if (ordersSearch && ordersSearch.trim() !== '') {
-      const term = ordersSearch.toLowerCase();
-      return (
-        order.id.toLowerCase().includes(term) ||
-        order.title.toLowerCase().includes(term) ||
-        order.buyerName.toLowerCase().includes(term)
-      );
-    }
-    return true;
-  });
+  const filtered = useMemo(() => {
+    return orders.filter(order => {
+      if (statusFilter !== 'All' && order.status !== statusFilter) return false;
+      if (ordersSearch && ordersSearch.trim() !== '') {
+        const term = ordersSearch.toLowerCase();
+        return (
+          order.id.toLowerCase().includes(term) ||
+          order.title.toLowerCase().includes(term) ||
+          order.buyerName.toLowerCase().includes(term)
+        );
+      }
+      return true;
+    });
+  }, [orders, statusFilter, ordersSearch]);
+
+  const metrics = useMemo(() => {
+    const totalRev = orders.reduce((sum, o) => sum + (parseFloat(o.price) || 0), 0);
+    const count = orders.length;
+    const avgVal = count > 0 ? (totalRev / count) : 0;
+    const pendingCount = orders.filter(o => o.status === 'Pending' || o.status === 'In Transit').length;
+
+    return {
+      totalRevenue: totalRev > 0 ? `PKR ${totalRev.toLocaleString()}` : 'N/A',
+      totalOrders: count > 0 ? count : 'N/A',
+      avgOrderValue: avgVal > 0 ? `PKR ${Math.round(avgVal).toLocaleString()}` : 'N/A',
+      pendingShipping: pendingCount
+    };
+  }, [orders]);
+
+  const handleExportCSV = () => {
+    if (orders.length === 0) { alert('No order history to export.'); return; }
+    const headers = ['Order ID', 'Item', 'Buyer', 'Location', 'Price', 'Date', 'Status'];
+    const rows = orders.map(o => [o.id, `"${o.title}"`, `"${o.buyerName}"`, `"${o.buyerLocation}"`, o.price, o.date, o.status]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `sales_orders_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="view-content fade-in">
@@ -71,37 +57,44 @@ function OrderHistory({ ordersSearch }) {
           <p className="view-sub">Track and manage all your completed and pending sales transactions.</p>
         </div>
         <div className="heading-buttons-history-row">
-          <button className="secondary-action-btn filter-action">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: '6px' }}>
-              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-            </svg>
-            Filter
-          </button>
-          <button className="primary-action-btn csv-action">Export CSV</button>
+          <select
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+            className="secondary-action-btn filter-action"
+            style={{ padding: '8px 12px', border: '1px solid #cbd5e1', cursor: 'pointer', background: '#fff' }}
+          >
+            <option value="All">All Statuses</option>
+            <option value="Delivered">Delivered</option>
+            <option value="In Transit">In Transit</option>
+            <option value="Pending">Pending</option>
+          </select>
+          <button className="primary-action-btn csv-action" onClick={handleExportCSV}>Export CSV</button>
         </div>
       </div>
 
-      {/* Metrics Row */}
+      {/* Metrics Row (100% Real Dynamic Data) */}
       <div className="history-metrics-row-grid">
         <div className="metrics-simple-card">
           <span className="metrics-simple-label">TOTAL REVENUE</span>
-          <h3>$12,450.00</h3>
-          <span className="metrics-simple-sub positive">✓ +15% from last month</span>
+          <h3>{metrics.totalRevenue}</h3>
+          <span className="metrics-simple-sub positive">✓ Real-time sales total</span>
         </div>
         <div className="metrics-simple-card">
           <span className="metrics-simple-label">TOTAL ORDERS</span>
-          <h3>142</h3>
-          <span className="metrics-simple-sub">Average 4.7 per day</span>
+          <h3>{metrics.totalOrders}</h3>
+          <span className="metrics-simple-sub">Processed transactions</span>
         </div>
         <div className="metrics-simple-card">
           <span className="metrics-simple-label">AVG. ORDER VALUE</span>
-          <h3>$87.60</h3>
-          <span className="metrics-simple-sub">Stable trend</span>
+          <h3>{metrics.avgOrderValue}</h3>
+          <span className="metrics-simple-sub">Calculated average</span>
         </div>
         <div className="metrics-simple-card">
           <span className="metrics-simple-label">PENDING SHIPPING</span>
-          <h3>8</h3>
-          <span className="metrics-simple-sub negative">Action required</span>
+          <h3>{metrics.pendingShipping}</h3>
+          <span className={`metrics-simple-sub ${metrics.pendingShipping > 0 ? 'negative' : 'positive'}`}>
+            {metrics.pendingShipping > 0 ? 'Action required' : 'All cleared'}
+          </span>
         </div>
       </div>
 

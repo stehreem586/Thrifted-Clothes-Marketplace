@@ -1,73 +1,24 @@
 import React, { useState } from 'react';
+import { useListings } from '../../context/ListingsContext';
+import { useAuth } from '../../context/AuthContext';
 import './Inventory.css';
 
-const initialProducts = [
-  {
-    id: 1,
-    title: 'Vintage Wool Trench Coat',
-    category: 'Outerwear',
-    size: 'M',
-    price: 85.00,
-    status: 'Active',
-    views: '1.2k',
-    likes: 45,
-    condition: 'Good',
-    description: 'Beautiful vintage wool trench coat. Perfect for winter layers. Very warm and cozy, standard medium fit.',
-    tags: ['Vintage', 'Sustainable', 'Outerwear'],
-    image: 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400&q=80'
-  },
-  {
-    id: 2,
-    title: 'Handcrafted Leather Loafers',
-    category: 'Footwear',
-    size: '10',
-    price: 120.00,
-    status: 'Sold',
-    views: '842',
-    likes: 29,
-    condition: 'Like New',
-    description: 'Genuine leather loafers, hand-stitched. Only worn twice, excellent condition.',
-    tags: ['Sustainable', 'Leather', 'Footwear'],
-    image: 'https://images.unsplash.com/photo-1533867617858-e7b97e060509?w=400&q=80'
-  },
-  {
-    id: 3,
-    title: 'Organic Cotton Shopper',
-    category: 'Accessories',
-    size: 'OS',
-    price: 18.00,
-    status: 'Draft',
-    views: 'N/A',
-    likes: 'N/A',
-    condition: 'New with tags',
-    description: '100% organic cotton tote bag. Durable and perfect for everyday shopping.',
-    tags: ['Cotton', 'Sustainable'],
-    image: 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=400&q=80'
-  },
-  {
-    id: 4,
-    title: 'Reclaimed Denim Jacket',
-    category: 'Streetwear',
-    size: 'L',
-    price: 65.00,
-    status: 'Active',
-    views: '3.1k',
-    likes: 92,
-    condition: 'Good',
-    description: 'Classic denim jacket with custom patch details. Relaxed fit.',
-    tags: ['90s fashion', 'Vintage', 'Sustainable'],
-    image: 'https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=400&q=80'
-  }
-];
-
 const popularTagList = ['90s fashion', 'Sustainable', 'Cotton', 'Vintage', 'Minimalist'];
+const ITEMS_PER_PAGE = 4;
 
-function Inventory({ inventorySearch }) {
+function Inventory({ inventorySearch, onNavigateToProfile }) {
+  const { listings, addListing, updateListing, deleteListing } = useListings();
+  const { profile } = useAuth();
   const [inventoryMode, setInventoryMode] = useState('list'); // 'list' | 'create' | 'edit'
-  const [listings, setListings] = useState(initialProducts);
   const [editingListing, setEditingListing] = useState(null);
   const [listingFilter, setListingFilter] = useState('All');
   const [sortBy, setSortBy] = useState('Newly Listed');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Modals state
+  const [previewProduct, setPreviewProduct] = useState(null);
+  const [showPromoModal, setShowPromoModal] = useState(false);
+  const [showProfileRequiredModal, setShowProfileRequiredModal] = useState(false);
 
   // Form states
   const [formTitle, setFormTitle] = useState('');
@@ -79,7 +30,16 @@ function Inventory({ inventorySearch }) {
   const [formTags, setFormTags] = useState([]);
   const [formImage, setFormImage] = useState('');
 
+  // Gate Check: Profile + Phone Verification
+  const isProfileComplete = () => {
+    return !!(profile?.name && profile?.city && profile?.phone);
+  };
+
   const handleOpenCreate = () => {
+    if (!isProfileComplete()) {
+      setShowProfileRequiredModal(true);
+      return;
+    }
     setEditingListing(null);
     setFormTitle(''); setFormCategory(''); setFormCondition('');
     setFormDescription(''); setFormPrice(''); setFormSize('');
@@ -102,7 +62,18 @@ function Inventory({ inventorySearch }) {
 
   const handleDeleteListing = (id) => {
     if (window.confirm('Are you sure you want to delete this listing?')) {
-      setListings(listings.filter(item => item.id !== id));
+      deleteListing(id);
+    }
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormImage(reader.result);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -114,31 +85,41 @@ function Inventory({ inventorySearch }) {
     }
   };
 
-  const handleFormSubmit = (e, status) => {
+  const handleFormSubmit = async (e, status) => {
     e.preventDefault();
+    if (!isProfileComplete()) {
+      setShowProfileRequiredModal(true);
+      return;
+    }
     if (!formTitle || !formPrice) { alert('Please fill out Title and Price fields.'); return; }
     const priceNum = parseFloat(formPrice);
     if (isNaN(priceNum)) { alert('Price must be a valid number.'); return; }
     const imageToUse = formImage || 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=400&q=80';
 
     if (inventoryMode === 'create') {
-      const newProduct = {
-        id: Date.now(), title: formTitle, category: formCategory || 'Other',
-        size: formSize || 'OS', price: priceNum, status,
-        views: status === 'Draft' ? 'N/A' : '0',
-        likes: status === 'Draft' ? 'N/A' : '0',
-        condition: formCondition || 'Good', description: formDescription,
-        tags: formTags, image: imageToUse
-      };
-      setListings([newProduct, ...listings]);
+      await addListing({
+        title: formTitle,
+        category: formCategory || 'Other',
+        size: formSize || 'OS',
+        price: priceNum,
+        status,
+        condition: formCondition || 'Good',
+        description: formDescription,
+        tags: formTags,
+        image: imageToUse
+      });
     } else if (inventoryMode === 'edit' && editingListing) {
-      setListings(listings.map(item =>
-        item.id === editingListing.id
-          ? { ...item, title: formTitle, category: formCategory, size: formSize, price: priceNum,
-              status: status === 'Draft' ? 'Draft' : 'Active', condition: formCondition,
-              description: formDescription, tags: formTags, image: imageToUse }
-          : item
-      ));
+      await updateListing(editingListing.id, {
+        title: formTitle,
+        category: formCategory,
+        size: formSize,
+        price: priceNum,
+        status: status === 'Draft' ? 'Draft' : 'Active',
+        condition: formCondition,
+        description: formDescription,
+        tags: formTags,
+        image: imageToUse
+      });
     }
     setInventoryMode('list');
     setEditingListing(null);
@@ -159,6 +140,11 @@ function Inventory({ inventorySearch }) {
     return true;
   });
 
+  // Pagination Math (4 products per screen)
+  const totalPages = Math.max(1, Math.ceil(filteredListings.length / ITEMS_PER_PAGE));
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedListings = filteredListings.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
   /* ────────── LIST VIEW ────────── */
   if (inventoryMode === 'list') {
     return (
@@ -166,7 +152,7 @@ function Inventory({ inventorySearch }) {
         <div className="view-heading border-bottom">
           <div>
             <h1>Listing Management</h1>
-            <p className="view-sub">Track, edit, and organize your sustainable collection.</p>
+            <p className="view-sub">Track, edit, and organize your sustainable collection (4 products per screen).</p>
           </div>
           <button className="primary-action-btn" onClick={handleOpenCreate}>
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: '6px' }}>
@@ -181,7 +167,7 @@ function Inventory({ inventorySearch }) {
           <div className="tab-filters">
             {[['All', listings.length], ['Active', activeCount], ['Sold', soldCount], ['Drafts', draftCount]].map(([label, count]) => (
               <button key={label} className={`filter-tab ${listingFilter === label ? 'active' : ''}`}
-                onClick={() => setListingFilter(label)}>
+                onClick={() => { setListingFilter(label); setCurrentPage(1); }}>
                 {label} <span className="tab-count">{count}</span>
               </button>
             ))}
@@ -211,18 +197,18 @@ function Inventory({ inventorySearch }) {
                 </tr>
               </thead>
               <tbody>
-                {filteredListings.length > 0 ? filteredListings.map(product => (
+                {paginatedListings.length > 0 ? paginatedListings.map(product => (
                   <tr key={product.id}>
                     <td>
-                      <div className="product-cell">
+                      <div className="product-cell" onClick={() => setPreviewProduct(product)} style={{ cursor: 'pointer' }}>
                         <div className="product-thumbnail"><img src={product.image} alt={product.title} /></div>
                         <div className="product-details">
-                          <span className="product-title">{product.title}</span>
+                          <span className="product-title" style={{ fontWeight: '600', color: '#0f172a' }}>{product.title}</span>
                           <span className="product-subtitle">Size {product.size} • {product.category}</span>
                         </div>
                       </div>
                     </td>
-                    <td className="price-cell"><strong>${product.price.toFixed(2)}</strong></td>
+                    <td className="price-cell"><strong>PKR {parseFloat(product.price).toLocaleString()}</strong></td>
                     <td>
                       <span className={`status-pill ${
                         product.status === 'Active' ? 'active-listing' :
@@ -234,30 +220,29 @@ function Inventory({ inventorySearch }) {
                         <span className="stats-text gray-text">N/A</span>
                       ) : (
                         <div className="stats-indicators">
-                          <span className="stat-indicator-item" title="Views">
+                          <span className="stat-indicator-item" title="Real Views">
                             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '4px' }}>
                               <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
                             </svg>
-                            {product.views}
+                            {product.views || 0}
                           </span>
-                          <span className="stat-indicator-item" title="Likes">
+                          <span className="stat-indicator-item" title="Real Likes">
                             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '4px' }}>
                               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
                             </svg>
-                            {product.likes}
+                            {product.likes || 0}
                           </span>
                         </div>
                       )}
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <div className="actions-cell">
-                        {product.status === 'Sold' ? (
-                          <button className="action-icon-btn view-btn" title="View details">
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
-                            </svg>
-                          </button>
-                        ) : (
+                        <button className="action-icon-btn view-btn" onClick={() => setPreviewProduct(product)} title="View item details">
+                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
+                          </svg>
+                        </button>
+                        {product.status !== 'Sold' && (
                           <>
                             <button className="action-icon-btn edit-btn" onClick={() => handleOpenEdit(product)} title="Edit listing">
                               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
@@ -274,11 +259,6 @@ function Inventory({ inventorySearch }) {
                             </button>
                           </>
                         )}
-                        <button className="action-icon-btn more-btn">
-                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
-                            <circle cx="12" cy="5" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="12" cy="19" r="1" />
-                          </svg>
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -288,19 +268,41 @@ function Inventory({ inventorySearch }) {
               </tbody>
             </table>
           </div>
+
+          {/* Dynamic 4-Items-Per-Screen Pagination */}
           <div className="table-footer-pagination">
-            <span className="showing-indicator">Showing 1-{filteredListings.length} of {listings.length} listings</span>
+            <span className="showing-indicator">
+              Showing {filteredListings.length === 0 ? 0 : startIndex + 1}-{Math.min(startIndex + ITEMS_PER_PAGE, filteredListings.length)} of {filteredListings.length} listings
+            </span>
             <div className="pagination-controls">
-              <button className="pagination-btn arrow-btn" disabled>&lt;</button>
-              <button className="pagination-btn active">1</button>
-              <button className="pagination-btn">2</button>
-              <button className="pagination-btn">3</button>
-              <button className="pagination-btn arrow-btn">&gt;</button>
+              <button
+                className="pagination-btn arrow-btn"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              >
+                &lt;
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                <button
+                  key={p}
+                  className={`pagination-btn ${currentPage === p ? 'active' : ''}`}
+                  onClick={() => setCurrentPage(p)}
+                >
+                  {p}
+                </button>
+              ))}
+              <button
+                className="pagination-btn arrow-btn"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              >
+                &gt;
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Bottom Metric Cards */}
+        {/* Bottom Metric Cards — Real Dynamic Data */}
         <div className="dashboard-cards-bottom-row">
           <div className="metric-card-styled">
             <div className="metric-card-icon-title">
@@ -310,8 +312,19 @@ function Inventory({ inventorySearch }) {
               <span>Revenue This Month</span>
             </div>
             <div className="metric-value-block">
-              <h3>$1,240.50</h3>
-              <span className="metric-sublabel positive">+12% from last month</span>
+              {(() => {
+                const now = new Date();
+                const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+                // orders is not in scope here, use listings sold count as proxy
+                const soldThisMonth = listings.filter(l => l.status === 'Sold' && l.createdAt && new Date(l.createdAt).getTime() >= startOfMonth);
+                const totalRevMonth = soldThisMonth.reduce((sum, l) => sum + (parseFloat(l.price) || 0), 0);
+                return (
+                  <>
+                    <h3>{totalRevMonth > 0 ? `PKR ${totalRevMonth.toLocaleString()}` : 'N/A'}</h3>
+                    <span className="metric-sublabel positive">{soldThisMonth.length} item(s) sold this month</span>
+                  </>
+                );
+              })()}
             </div>
           </div>
 
@@ -323,11 +336,20 @@ function Inventory({ inventorySearch }) {
               <span>Sustainability Impact</span>
             </div>
             <div className="metric-value-block">
-              <h3>42 kg CO2</h3>
-              <span className="metric-sublabel">35% of annual goal</span>
-              <div className="metric-horizontal-bar">
-                <div className="metric-bar-fill" style={{ width: '35%' }}></div>
-              </div>
+              {(() => {
+                const soldCount = listings.filter(l => l.status === 'Sold').length;
+                const co2Saved = soldCount * 3.2; // avg 3.2kg CO2 saved per thrifted item
+                const goalPct = Math.min(Math.round((co2Saved / 120) * 100), 100);
+                return (
+                  <>
+                    <h3>{co2Saved > 0 ? `${co2Saved.toFixed(1)} kg CO2` : 'N/A'}</h3>
+                    <span className="metric-sublabel">{goalPct}% of annual goal</span>
+                    <div className="metric-horizontal-bar">
+                      <div className="metric-bar-fill" style={{ width: `${goalPct}%` }}></div>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </div>
 
@@ -338,10 +360,119 @@ function Inventory({ inventorySearch }) {
               </svg>
               <h4>Quick Promotion</h4>
               <p>Boost your visibility by 200% with SecondLife Plus.</p>
-              <button className="promo-action-btn">Learn More</button>
+              <button className="promo-action-btn" onClick={() => setShowPromoModal(true)}>Learn More</button>
             </div>
           </div>
         </div>
+
+        {/* ── Product Preview Modal ── */}
+        {previewProduct && (
+          <div className="seller-help-overlay" onClick={() => setPreviewProduct(null)}>
+            <div className="seller-help-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '540px' }}>
+              <div className="seller-help-header">
+                <h3>Product Details</h3>
+                <button className="seller-help-close-btn" onClick={() => setPreviewProduct(null)}>✕</button>
+              </div>
+              <div className="seller-help-body" style={{ padding: '20px' }}>
+                <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
+                  <img src={previewProduct.image} alt={previewProduct.title} style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '10px' }} />
+                  <div>
+                    <h3 style={{ margin: '0 0 6px 0', fontSize: '18px' }}>{previewProduct.title}</h3>
+                    <p style={{ margin: '0 0 6px 0', color: '#64748b', fontSize: '14px' }}>
+                      Category: <strong>{previewProduct.category}</strong> | Size: <strong>{previewProduct.size}</strong>
+                    </p>
+                    <p style={{ margin: '0 0 6px 0', color: '#64748b', fontSize: '14px' }}>
+                      Condition: <strong>{previewProduct.condition}</strong>
+                    </p>
+                    <h4 style={{ margin: '6px 0 0 0', color: '#c19358', fontSize: '18px' }}>
+                      PKR {parseFloat(previewProduct.price).toLocaleString()}
+                    </h4>
+                  </div>
+                </div>
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', marginBottom: '16px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Description</span>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#334155' }}>
+                    {previewProduct.description || 'No detailed description provided.'}
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: '16px', fontSize: '13px', color: '#475569' }}>
+                  <span>Status: <strong className={`status-pill ${previewProduct.status === 'Active' ? 'active-listing' : 'draft-listing'}`}>{previewProduct.status}</strong></span>
+                  <span>Real Views: <strong>{previewProduct.views || 0}</strong></span>
+                  <span>Real Likes: <strong>{previewProduct.likes || 0}</strong></span>
+                </div>
+              </div>
+              <div className="seller-help-footer">
+                <button className="seller-help-gotit-btn" onClick={() => setPreviewProduct(null)}>Close Preview</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── SecondLife Plus Promo Modal ── */}
+        {showPromoModal && (
+          <div className="seller-help-overlay" onClick={() => setShowPromoModal(false)}>
+            <div className="seller-help-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '420px', textAlign: 'center' }}>
+              <div className="seller-help-header">
+                <h3>⚡ SecondLife Plus</h3>
+                <button className="seller-help-close-btn" onClick={() => setShowPromoModal(false)}>✕</button>
+              </div>
+              <div className="seller-help-body" style={{ padding: '24px 16px' }}>
+                <div style={{ width: '60px', height: '60px', background: '#fef3c7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto', color: '#d97706' }}>
+                  <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                  </svg>
+                </div>
+                <h3 style={{ margin: '0 0 8px 0', fontSize: '20px' }}>SecondLife Plus Promotion</h3>
+                <span style={{ display: 'inline-block', background: '#0f172a', color: '#fff', fontSize: '12px', fontWeight: '700', padding: '4px 12px', borderRadius: '20px', marginBottom: '12px' }}>
+                  Coming Soon 🚀
+                </span>
+                <p style={{ color: '#64748b', fontSize: '14px', lineHeight: '1.5', margin: 0 }}>
+                  We are building SecondLife Plus to give featured placement to top seller listings, increasing views by over 200%. Stay tuned!
+                </p>
+              </div>
+              <div className="seller-help-footer">
+                <button className="seller-help-gotit-btn" onClick={() => setShowPromoModal(false)}>Got it</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Profile Setup & Phone Verification Required Modal ── */}
+        {showProfileRequiredModal && (
+          <div className="seller-help-overlay" onClick={() => setShowProfileRequiredModal(false)}>
+            <div className="seller-help-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '460px' }}>
+              <div className="seller-help-header">
+                <h3>⚠️ Profile & Phone Verification Required</h3>
+                <button className="seller-help-close-btn" onClick={() => setShowProfileRequiredModal(false)}>✕</button>
+              </div>
+              <div className="seller-help-body" style={{ padding: '20px' }}>
+                <p style={{ fontSize: '14px', color: '#334155', lineHeight: '1.6', margin: '0 0 12px 0' }}>
+                  To maintain buyer trust and start listing items on SecondLife Marketplace, you must first complete your mandatory seller details:
+                </p>
+                <ul style={{ fontSize: '13px', color: '#475569', paddingLeft: '20px', lineHeight: '1.8', margin: '0 0 16px 0' }}>
+                  <li><strong>Store Name</strong> (Required)</li>
+                  <li><strong>City Location</strong> (Required)</li>
+                  <li><strong>Verified Phone Number via OTP</strong> (Required)</li>
+                </ul>
+                <p style={{ fontSize: '13px', color: '#d97706', background: '#fffbeb', padding: '10px', borderRadius: '6px', border: '1px solid #fde68a', margin: 0 }}>
+                  Please complete your store details to unlock item listing privileges.
+                </p>
+              </div>
+              <div className="seller-help-footer" style={{ justifyContent: 'space-between' }}>
+                <button className="seller-help-close-btn" style={{ fontSize: '14px', border: 'none', background: 'transparent' }} onClick={() => setShowProfileRequiredModal(false)}>Cancel</button>
+                <button
+                  className="seller-help-gotit-btn"
+                  onClick={() => {
+                    setShowProfileRequiredModal(false);
+                    if (onNavigateToProfile) onNavigateToProfile();
+                  }}
+                >
+                  Complete Store Profile Now ➔
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -377,18 +508,23 @@ function Inventory({ inventorySearch }) {
                   <button className="remove-image-badge" onClick={() => setFormImage('')} type="button">✕</button>
                 </div>
               ) : (
-                <div className="upload-placeholder-content" onClick={() => {
-                  const url = prompt('Enter a valid image URL to simulate file upload:');
-                  if (url) setFormImage(url);
-                }}>
+                <label htmlFor="cover-photo-file" className="upload-placeholder-content" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                   <div className="camera-icon-wrapper">
                     <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
                       <circle cx="12" cy="13" r="4" />
                     </svg>
                   </div>
-                  <span>+ Cover Photo</span>
-                </div>
+                  <span>+ Upload Cover Photo</span>
+                  <input
+                    id="cover-photo-file"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+
               )}
             </div>
             <div className="small-photos-grid">

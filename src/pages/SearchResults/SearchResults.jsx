@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useListings } from '../../context/ListingsContext';
 import './SearchResults.css';
 
 // Import images from assets
@@ -77,6 +78,7 @@ const INITIAL_PRODUCTS = [
 const SearchResults = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { allMarketplaceProducts, toggleLike } = useListings();
   
   // URL search query
   const query = searchParams.get('q') || 'Vintage Jacket';
@@ -85,14 +87,34 @@ const SearchResults = () => {
   const [selectedCategories, setSelectedCategories] = useState(['Jackets & Coats']);
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
-  const [priceSliderValue, setPriceSliderValue] = useState(200);
+  const [priceSliderValue, setPriceSliderValue] = useState(20000); // scaled for PKR
   const [selectedCondition, setSelectedCondition] = useState('All');
   const [selectedStyle, setSelectedStyle] = useState('Vintage');
   const [sortBy, setSortBy] = useState('Newest First');
   const [wishlistedIds, setWishlistedIds] = useState(new Set());
 
-  // Handle wishlist toggle
+  // Merge dynamic seller products into Search Results
+  const mergedProducts = useMemo(() => {
+    const mapped = allMarketplaceProducts.map(p => ({
+      id: p.id,
+      title: p.title,
+      price: p.numericPrice || parseFloat(p.price) || 0,
+      size: p.size || 'M',
+      condition: p.condition || 'Good',
+      style: p.category || 'Vintage',
+      category: p.category || 'Jackets & Coats',
+      image: p.image,
+      badge: p.status === 'Active' ? 'Active Seller' : null,
+      isUserCreated: p.isUserCreated
+    }));
+    return [...mapped, ...INITIAL_PRODUCTS];
+  }, [allMarketplaceProducts]);
+
+  // Handle wishlist toggle (syncs with Seller hearts)
   const toggleWishlist = (id) => {
+    const isLiked = wishlistedIds.has(id);
+    toggleLike(id, !isLiked);
+
     setWishlistedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -116,13 +138,13 @@ const SearchResults = () => {
     const val = e.target.value;
     setMaxPrice(val);
     const num = Number(val);
-    if (!isNaN(num) && num >= 0 && num <= 500) {
+    if (!isNaN(num) && num >= 0 && num <= 50000) {
       setPriceSliderValue(num);
     }
   };
 
   // Filter categories
-  const categoriesList = ['Jackets & Coats', 'Vintage Outerwear', 'Denim Jackets'];
+  const categoriesList = ['Jackets & Coats', 'Vintage Outerwear', 'Denim Jackets', 'Outerwear', 'Streetwear', 'Footwear', 'Accessories'];
 
   const toggleCategory = (category) => {
     setSelectedCategories((prev) => {
@@ -139,7 +161,7 @@ const SearchResults = () => {
     setSelectedCategories([]);
     setMinPrice('');
     setMaxPrice('');
-    setPriceSliderValue(200);
+    setPriceSliderValue(20000);
     setSelectedCondition('All');
     setSelectedStyle('All');
     setSortBy('Newest First');
@@ -147,7 +169,7 @@ const SearchResults = () => {
 
   // Filtered and Sorted Products
   const filteredProducts = useMemo(() => {
-    return INITIAL_PRODUCTS.filter((product) => {
+    return mergedProducts.filter((product) => {
       // 1. Text Search matching title, style, condition, or category
       if (query && query.toLowerCase() !== 'all') {
         const lowerQuery = query.toLowerCase();
@@ -415,7 +437,9 @@ const SearchResults = () => {
                           Size: {product.size} • {product.condition}
                         </p>
                         <div className="sr-card-footer">
-                          <span className="sr-card-price">${product.price}</span>
+                          <span className="sr-card-price">
+                            {product.isUserCreated ? `PKR ${parseFloat(product.price).toLocaleString()}` : `$${product.price}`}
+                          </span>
                           <span className="sr-card-view-details">View Details</span>
                         </div>
                       </div>
