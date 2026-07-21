@@ -2,11 +2,18 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Shop.css';
 import ProductCard from '../../components/ProductCard/ProductCard';
-import { browseProducts } from '../../data/browseProducts';
+import { useListings } from '../../context/ListingsContext';
 
 const Shop = () => {
   const navigate = useNavigate();
-  const [products, setProducts] = useState(browseProducts);
+  const { allMarketplaceProducts, toggleLike } = useListings();
+  const [products, setProducts] = useState(allMarketplaceProducts);
+
+  // Sync products when allMarketplaceProducts updates
+  React.useEffect(() => {
+    setProducts(allMarketplaceProducts);
+  }, [allMarketplaceProducts]);
+
   const [selectedCity, setSelectedCity] = useState('New York, NY');
   const [selectedSize, setSelectedSize] = useState('XS');
   const [selectedCategory, setSelectedCategory] = useState('Vintage');
@@ -20,6 +27,11 @@ const Shop = () => {
   const [sortBy, setSortBy] = useState('Newest Arrivals');
 
   const toggleWishlist = (id) => {
+    const target = products.find(p => p.id === id);
+    if (target) {
+      const nextLiked = !target.wishlisted;
+      toggleLike(id, nextLiked);
+    }
     setProducts(products.map(p => p.id === id ? { ...p, wishlisted: !p.wishlisted } : p));
   };
 

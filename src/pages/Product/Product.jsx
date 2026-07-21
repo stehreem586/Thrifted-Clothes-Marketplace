@@ -2,18 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import ProductCard from '../../components/ProductCard/ProductCard';
 import { browseProducts, similarProducts } from '../../data/browseProducts';
+import { useListings } from '../../context/ListingsContext';
 import './Product.css';
 
 const Product = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const productId = parseInt(id);
+  const { allMarketplaceProducts, incrementViews, toggleLike, sendBuyerMessage } = useListings();
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [buyerMsgInput, setBuyerMsgInput] = useState('');
 
-  // Find product from either browse list or similar items list
+  // Find product from allMarketplaceProducts or similar items list
   const currentProduct = 
-    browseProducts.find(p => p.id === productId) || 
-    similarProducts.find(p => p.id === productId) || 
-    browseProducts.find(p => p.id === 4); // default to Archival Camel Wool Overcoat if not found
+    allMarketplaceProducts.find(p => String(p.id) === String(id) || String(p.originalId) === String(id)) || 
+    similarProducts.find(p => String(p.id) === String(id)) || 
+    allMarketplaceProducts.find(p => p.id === 4) ||
+    browseProducts[0];
 
   const sellerInfo = currentProduct.seller || {
     name: "Elena's Archive",
@@ -33,6 +37,13 @@ const Product = () => {
   const [wishlisted, setWishlisted] = useState(currentProduct.wishlisted);
   const [toastMessage, setToastMessage] = useState('');
 
+  // Increment product view count on mount & when product ID changes
+  useEffect(() => {
+    if (currentProduct?.id) {
+      incrementViews(currentProduct.id);
+    }
+  }, [id]);
+
   // Reset local states when product ID changes
   useEffect(() => {
     const thumbs = currentProduct.thumbnails || [
@@ -46,8 +57,12 @@ const Product = () => {
   }, [id, currentProduct]);
 
   const handleWishlistToggle = () => {
-    setWishlisted(!wishlisted);
-    showToast(!wishlisted ? 'Added to Saved Items' : 'Removed from Saved Items');
+    const nextState = !wishlisted;
+    setWishlisted(nextState);
+    if (currentProduct?.id) {
+      toggleLike(currentProduct.id, nextState);
+    }
+    showToast(nextState ? 'Added to Saved Items & Liked ❤️' : 'Removed from Saved Items');
   };
 
   const showToast = (msg) => {
@@ -58,11 +73,20 @@ const Product = () => {
   };
 
   const handleChatClick = () => {
-    navigate('/chat', { state: { startChatWith: sellerInfo.name } });
-    const sellerSlug = currentProduct.seller?.name ? 
-      currentProduct.seller.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '') : 'vintage-vibes';
-    const targetSlug = sellerSlug.includes('elena') ? 'elena-archive' : sellerSlug;
-    navigate(`/seller-profile/${targetSlug}`);
+    setShowMessageModal(true);
+  };
+
+  const handleSendBuyerText = (e) => {
+    e.preventDefault();
+    if (!buyerMsgInput.trim()) return;
+    sendBuyerMessage({
+      productTitle: currentProduct.title,
+      buyerName: 'Buyer Customer',
+      text: buyerMsgInput.trim()
+    });
+    setBuyerMsgInput('');
+    setShowMessageModal(false);
+    showToast('Message sent to seller! Check Seller Inbox 💬');
   };
 
   const handleBuyNow = () => {
@@ -260,6 +284,61 @@ const Product = () => {
           ))}
         </div>
       </div>
+      {/* ── Message Seller Modal Overlay ── */}
+      {showMessageModal && (
+        <div className="seller-help-overlay" style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          background: 'rgba(0, 0, 0, 0.45)', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', zIndex: 10000
+        }} onClick={() => setShowMessageModal(false)}>
+          <div className="seller-help-modal" style={{
+            background: '#ffffff', borderRadius: '12px', width: '90%', maxWidth: '440px',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.15)', overflow: 'hidden'
+          }} onClick={e => e.stopPropagation()}>
+            <div className="seller-help-header" style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '16px 20px', background: '#0f172a', color: '#ffffff'
+            }}>
+              <h3 style={{ margin: 0, color: '#ffffff', fontSize: '16px' }}>✉️ Message Seller</h3>
+              <button className="seller-help-close-btn" style={{ background: 'transparent', border: 'none', color: '#ffffff', fontSize: '18px', cursor: 'pointer' }} onClick={() => setShowMessageModal(false)}>✕</button>
+            </div>
+            <form onSubmit={handleSendBuyerText} style={{ padding: '20px' }}>
+              <p style={{ margin: '0 0 12px 0', fontSize: '13.5px', color: '#475569', lineHeight: '1.4' }}>
+                Inquire about <strong>{currentProduct.title}</strong> directly from the seller:
+              </p>
+              <textarea
+                placeholder="Type your inquiry message (e.g. Is price negotiable? Can you deliver to Lahore?)..."
+                value={buyerMsgInput}
+                onChange={e => setBuyerMsgInput(e.target.value)}
+                style={{
+                  width: '100%', height: '100px', padding: '10px 12px', borderRadius: '8px',
+                  border: '1.5px solid #cbd5e1', fontSize: '13.5px', resize: 'none', marginBottom: '16px'
+                }}
+                required
+                autoFocus
+              />
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowMessageModal(false)}
+                  style={{ background: 'transparent', border: 'none', fontSize: '13px', color: '#64748b', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    background: '#1e293b', color: '#ffffff', border: 'none', padding: '8px 16px',
+                    borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer'
+                  }}
+                >
+                  Send Message
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
