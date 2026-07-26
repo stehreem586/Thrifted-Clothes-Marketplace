@@ -46,8 +46,25 @@ const arrivalProducts = [
   }
 ];
 
+import { useAuth } from '../../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+
 export const NewArrivalCard = ({ product }) => {
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleHeartClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user) {
+      if (window.confirm("You must be logged in to save listings to your wishlist. Would you like to log in now?")) {
+        navigate('/login');
+      }
+      return;
+    }
+    setIsWishlisted(!isWishlisted);
+  };
 
   return (
     <div className="new-arrival-card">
@@ -56,11 +73,7 @@ export const NewArrivalCard = ({ product }) => {
         <button 
           type="button" 
           className={`new-arrival-heart-btn ${isWishlisted ? 'wishlisted' : ''}`}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setIsWishlisted(!isWishlisted);
-          }}
+          onClick={handleHeartClick}
           aria-label="Add to Wishlist"
         >
           <svg viewBox="0 0 24 24" width="18" height="18" fill={isWishlisted ? '#ff3b30' : 'none'} stroke={isWishlisted ? '#ff3b30' : 'currentColor'} strokeWidth="2">

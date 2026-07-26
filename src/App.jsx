@@ -36,23 +36,40 @@ import AdminSettings from './pages/Admin/Settings';
 import './App.css';
 
 function MainLayout() {
-  const { user, profile } = useAuth();
-  const userRole = user ? (profile?.role || user?.user_metadata?.role || localStorage.getItem('userRole') || 'customer') : null;
+  const { user, profile, loading, userMode } = useAuth();
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: '#faf9f6' }}>
+        <div style={{ width: '40px', height: '40px', border: '3px solid rgba(193, 147, 88, 0.2)', borderTopColor: '#c19358', borderRadius: '50%', animation: 'app-spin 0.8s linear infinite' }}></div>
+        <style>{`@keyframes app-spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+  const isBuyer = user && userMode === 'buyer';
+  console.log("DEBUG MainLayout - userMode:", userMode, "user:", user ? user.id : null, "isBuyer:", isBuyer);
   return (
     <div className="app-wrapper" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      {userRole === 'customer' ? <MHNavbar /> : <Navbar />}
+      {isBuyer ? <MHNavbar /> : <Navbar />}
       <main style={{ flex: 1 }}>
         <Outlet />
       </main>
-      {userRole === 'customer' ? <MHFooter /> : <Footer />}
+      {isBuyer ? <MHFooter /> : <Footer />}
     </div>
   );
 }
 
 function HomeRouter() {
-  const { user, profile } = useAuth();
-  const userRole = user ? (profile?.role || user?.user_metadata?.role || localStorage.getItem('userRole') || 'customer') : null;
-  if (userRole === 'customer') {
+  const { user, profile, loading, userMode } = useAuth();
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '100px 0' }}>
+        <div style={{ width: '40px', height: '40px', border: '3px solid rgba(193, 147, 88, 0.2)', borderTopColor: '#c19358', borderRadius: '50%', animation: 'app-spin 0.8s linear infinite' }}></div>
+      </div>
+    );
+  }
+  const isBuyer = user && userMode === 'buyer';
+  console.log("DEBUG HomeRouter - userMode:", userMode, "user:", user ? user.id : null, "isBuyer:", isBuyer);
+  if (isBuyer) {
     return <MarketplaceHomepage />;
   }
   return <Home />;

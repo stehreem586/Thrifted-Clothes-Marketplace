@@ -7,8 +7,13 @@ import Testimonials from '../../sections/Testimonials/Testimonials';
 import NewsletterSection from '../../sections/NewsletterSection/NewsletterSection';
 import { products } from '../../data/products';
 import { categories } from '../../data/categories';
+import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const Home = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
   const handleProductClick = (product) => {
     console.log('Selected product:', product);
   };
@@ -25,6 +30,14 @@ const Home = () => {
     console.log('Browse all categories');
   };
 
+  const handleWishlistToggle = () => {
+    if (!user) {
+      if (window.confirm("You must be logged in to save listings to your wishlist. Would you like to log in now?")) {
+        navigate('/login');
+      }
+    }
+  };
+
   return (
     <div className="app-shell">
       <main>
@@ -32,6 +45,7 @@ const Home = () => {
         <TrendingSection
           products={products}
           onProductClick={handleProductClick}
+          onWishlistToggle={handleWishlistToggle}
           onViewAll={handleViewAll}
         />
         <CategorySection
