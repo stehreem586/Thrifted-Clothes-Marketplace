@@ -27,7 +27,9 @@ const MHNavbar = () => {
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      navigate(`/shop?q=${encodeURIComponent(searchQuery.trim())}`);
+    } else {
+      navigate('/shop');
     }
   };
 

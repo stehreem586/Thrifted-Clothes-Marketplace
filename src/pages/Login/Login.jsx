@@ -44,7 +44,7 @@ function Login() {
   const [resendLoading, setResendLoading] = useState(false);
   const [showDuplicateEmailPopup, setShowDuplicateEmailPopup] = useState(false);
 
-  const { login, signup, loginWithGoogle, user, profile, loading, isProfileComplete } = useAuth();
+  const { login, signup, loginWithGoogle, user, profile, loading, isProfileComplete, switchMode } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
@@ -80,11 +80,12 @@ function Login() {
         if (!isProfileComplete(profile)) {
           navigate('/profile-setup', { replace: true });
         } else {
+          switchMode('buyer');
           navigate('/', { replace: true });
         }
       }
     }
-  }, [user, profile, loading, navigate, isProfileComplete]);
+  }, [user, profile, loading, navigate, isProfileComplete, switchMode]);
 
   const handleModeSwitch = () => {
     setIsSignUpMode(prev => !prev);
@@ -279,6 +280,8 @@ function Login() {
         const data = await login(email, password, staySignedIn);
         const userRole = data.user?.user_metadata?.role || 'customer';
         localStorage.setItem('userRole', userRole);
+        switchMode('buyer');
+        navigate('/', { replace: true });
       } catch (err) {
         if (err.message === 'Email not confirmed') {
           setErrorMsg('Your email is not verified yet. We have enabled code verification below.');
