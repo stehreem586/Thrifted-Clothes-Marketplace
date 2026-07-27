@@ -2,7 +2,7 @@ import React from 'react';
 import ChatActions from '../ChatActions/ChatActions';
 import './ChatHeader.css';
 
-const ChatHeader = ({ user, onCall, onVideo, onMore }) => {
+const ChatHeader = ({ user, onCall, onVideo, onReport, onMore }) => {
   if (!user) return null;
 
   return (
@@ -19,7 +19,7 @@ const ChatHeader = ({ user, onCall, onVideo, onMore }) => {
           </span>
         </div>
       </div>
-      <ChatActions onCall={onCall} onVideo={onVideo} onMore={onMore} />
+      <ChatActions onCall={onCall} onVideo={onVideo} onReport={onReport} onMore={onMore} />
     </div>
   );
 };

@@ -5,6 +5,8 @@ import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../utils/supabaseClient.js';
 import { fetchSavedListingIds, toggleSavedListing } from '../../utils/savedFetch.js';
 import { useListings } from '../../context/ListingsContext';
+import ReportModal from '../../components/common/ReportModal';
+import { ShieldAlert } from 'lucide-react';
 import './Product.css';
 
 const Product = () => {
@@ -25,6 +27,7 @@ const Product = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   
   const [showMessageModal, setShowMessageModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   const [buyerMsgInput, setBuyerMsgInput] = useState('');
   const [toastMessage, setToastMessage] = useState('');
 
@@ -455,7 +458,42 @@ const Product = () => {
               </svg>
               <span>Chat with Seller</span>
             </button>
+
+            <button
+              type="button"
+              className="save-btn"
+              onClick={() => setShowReportModal(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '48px',
+                height: '48px',
+                borderRadius: '8px',
+                border: '1px solid #fee2e2',
+                backgroundColor: '#fff5f5',
+                cursor: 'pointer',
+                color: '#dc2626',
+                transition: 'all 0.2s',
+                padding: 0
+              }}
+              title="Report Listing"
+              aria-label="Report Listing"
+            >
+              <ShieldAlert size={20} />
+            </button>
           </div>
+
+          {/* Report Modal */}
+          {listing && (
+            <ReportModal
+              isOpen={showReportModal}
+              onClose={() => setShowReportModal(false)}
+              targetType="Listing"
+              targetListing={listing}
+              targetUser={listing.seller}
+            />
+          )}
 
           {/* Description Section with expandable Read More limit */}
           <div className="detail-description-section" style={{ marginTop: '32px' }}>

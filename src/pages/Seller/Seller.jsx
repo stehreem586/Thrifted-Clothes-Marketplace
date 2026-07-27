@@ -7,6 +7,7 @@ import SellerDashboard from './SellerDashboard';
 import Inventory from './Inventory';
 import OrderHistory from './OrderHistory';
 import SellerProfile from './SellerProfile';
+import SellerReviews from './SellerReviews';
 
 function Seller() {
   const { switchMode, user, profile } = useAuth();
@@ -154,6 +155,9 @@ function Seller() {
             )},
             { key: 'profile', label: 'Store Profile', icon: (
               <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>
+            )},
+            { key: 'reviews', label: 'Reviews', icon: (
+              <><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></>
             )},
             { key: 'sales', label: 'Sales', icon: (
               <><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></>
@@ -335,6 +339,10 @@ function Seller() {
 
         {activeTab === 'profile' && (
           <SellerProfile />
+        )}
+
+        {activeTab === 'reviews' && (
+          <SellerReviews />
         )}
 
         {['sales', 'messages', 'community'].includes(activeTab) && (

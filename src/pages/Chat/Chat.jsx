@@ -5,6 +5,9 @@ import ChatHeader from './chat/ChatHeader/ChatHeader';
 import ProductCard from './chat/ProductCard/ProductCard';
 import MessageList from './chat/MessageList/MessageList';
 import ChatInput from './chat/ChatInput/ChatInput';
+import ReportModal from '../../components/common/ReportModal';
+import { useModeration } from '../../context/ModerationContext';
+import { useAuth } from '../../context/AuthContext';
 import './Chat.css';
 
 // Import product images for discussion
@@ -85,7 +88,11 @@ const Chat = () => {
   const [conversations, setConversations] = useState(initialConversations);
   const [activeConversationId, setActiveConversationId] = useState(1);
   const [showTyping, setShowTyping] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+
   const location = useLocation();
+  const { scanTextForViolations, submitUserReport } = useModeration();
+  const { user, profile } = useAuth();
 
   useEffect(() => {
     if (location.state?.startChatWith === 'CuratedByElena') {
@@ -95,7 +102,7 @@ const Chat = () => {
           setActiveConversationId(elenaConv.id);
           return prev;
         }
-        
+
         const elenaConv = {
           id: 4,
           user: {
@@ -198,6 +205,20 @@ const Chat = () => {
       })
     );
 
+    // Automatic System Detection Scanner Engine
+    const violation = scanTextForViolations(text);
+    if (violation && activeConversation) {
+      console.warn('System Scanner Flagged Message:', violation);
+      submitUserReport({
+        reportType: violation.type,
+        description: `[System Auto-Detected Flag] ${violation.reason}`,
+        reporter: { name: 'System Auto-Guardian', username: '@System_Bot' },
+        accused: { name: profile?.name || 'Current User', username: `@${profile?.name || 'User'}` },
+        listing: activeConversation.product,
+        messageId: String(newMsg.id)
+      });
+    }
+
     // Simulate reply after 1.5 seconds
     setShowTyping(true);
     setTimeout(() => {
@@ -231,6 +252,17 @@ const Chat = () => {
 
   return (
     <div className="chat-page-wrapper">
+      {/* Report Modal */}
+      {activeConversation && (
+        <ReportModal
+          isOpen={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          targetType="User / Chat Partner"
+          targetUser={activeConversation.user}
+          targetListing={activeConversation.product}
+        />
+      )}
+
       <div className="chat-container-box">
         <ChatSidebar
           conversations={conversations}
@@ -240,18 +272,19 @@ const Chat = () => {
         <div className="chat-window">
           {activeConversation ? (
             <>
-              <ChatHeader 
-                user={activeConversation.user} 
+              <ChatHeader
+                user={activeConversation.user}
                 onCall={() => alert('Voice call feature is coming soon!')}
                 onVideo={() => alert('Video call feature is coming soon!')}
-                onMore={() => alert('Settings menu coming soon!')}
+                onReport={() => setShowReportModal(true)}
+                onMore={() => setShowReportModal(true)}
               />
-              <ProductCard 
+              <ProductCard
                 product={activeConversation.product}
                 onMakeOffer={handleMakeOffer}
               />
-              <MessageList 
-                messages={activeConversation.messages} 
+              <MessageList
+                messages={activeConversation.messages}
                 showTyping={showTyping}
               />
               <ChatInput onSendMessage={handleSendMessage} />

@@ -72,20 +72,16 @@ function Login() {
   }, []);
 
   // If user is already authenticated (e.g. after clicking email confirmation link), redirect them
+  // If user is already authenticated, redirect to home
   useEffect(() => {
     if (user && !loading) {
-      // Check if they came from password recovery hash
       const isRecovering = window.location.hash.includes('type=recovery');
       if (!isRecovering) {
-        if (!isProfileComplete(profile)) {
-          navigate('/profile-setup', { replace: true });
-        } else {
-          switchMode('buyer');
-          navigate('/', { replace: true });
-        }
+        switchMode('buyer');
+        navigate('/', { replace: true });
       }
     }
-  }, [user, profile, loading, navigate, isProfileComplete, switchMode]);
+  }, [user, loading]);
 
   const handleModeSwitch = () => {
     setIsSignUpMode(prev => !prev);
