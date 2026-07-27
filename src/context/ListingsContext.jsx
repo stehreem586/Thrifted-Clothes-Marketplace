@@ -247,8 +247,67 @@ export const ListingsProvider = ({ children }) => {
     ));
   };
 
+  // ── Reviews state ──
+  const [reviews, setReviews] = useState(() => {
+    try {
+      const saved = localStorage.getItem('secondlife_seller_reviews');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return [
+      {
+        id: 'rev-1',
+        listingId: 101,
+        listingTitle: 'Vintage 90s Leather Biker Jacket',
+        listingImage: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&q=80',
+        customerName: 'Sarah Jenkins',
+        customerAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&q=80',
+        rating: 5,
+        comment: 'Absolutely in love with this jacket! Quality is even better than shown in pictures, super fast shipping.',
+        date: '2026-07-25',
+        reply: { text: 'Thank you Sarah! So glad you love the jacket! Enjoy!', date: '2026-07-25' }
+      },
+      {
+        id: 'rev-2',
+        listingId: 101,
+        listingTitle: 'Vintage 90s Leather Biker Jacket',
+        listingImage: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&q=80',
+        customerName: 'Ahmere Khan',
+        customerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=80',
+        rating: 4,
+        comment: 'Great fit and genuine vintage feel. Mild scent from storage but cleaned up nicely.',
+        date: '2026-07-24',
+        reply: null
+      },
+      {
+        id: 'rev-3',
+        listingId: 102,
+        listingTitle: 'Hand-repaired Eco Denim',
+        listingImage: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=400&q=80',
+        customerName: 'Mariam Ali',
+        customerAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80',
+        rating: 5,
+        comment: 'The custom sashiko stitching on these jeans is artistic perfection. 10/10 recommended seller!',
+        date: '2026-07-22',
+        reply: { text: 'Appreciate the kind words Mariam! Sustainability is our priority.', date: '2026-07-23' }
+      }
+    ];
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('secondlife_seller_reviews', JSON.stringify(reviews));
+    } catch (e) {}
+  }, [reviews]);
+
+  const addSellerReviewReply = (reviewId, replyText) => {
+    setReviews(prev => prev.map(r => r.id === reviewId ? {
+      ...r,
+      reply: { text: replyText, date: new Date().toISOString().split('T')[0] }
+    } : r));
+  };
+
   // ─────────────────────────────────────────────────────────
-  // 7. Listing CRUD
+  // 7. Listing CRUD & Admin Approvals
   // ─────────────────────────────────────────────────────────
   const addListing = async (productData) => {
     const newProduct = {
@@ -256,15 +315,16 @@ export const ListingsProvider = ({ children }) => {
       views: 0,
       likes: 0,
       createdAt: new Date().toISOString(),
+      status: productData.status === 'Draft' ? 'Draft' : 'Pending',
       ...productData
     };
 
     setListings(prev => [newProduct, ...prev]);
 
-    if (productData.status === 'Active') {
+    if (newProduct.status === 'Pending') {
       addNotification({
-        title: 'Listing Published 🛍️',
-        text: `"${productData.title}" is now live in the marketplace.`,
+        title: 'Listing Request Sent ⏳',
+        text: `"${productData.title}" has been submitted for Admin approval. Status: Pending.`,
         type: 'listing'
       });
     }
@@ -277,7 +337,7 @@ export const ListingsProvider = ({ children }) => {
           category: newProduct.category,
           size: newProduct.size,
           price: newProduct.price,
-          status: newProduct.status?.toLowerCase() || 'active',
+          status: newProduct.status?.toLowerCase() || 'pending',
           condition: newProduct.condition,
           description: newProduct.description,
           tags: newProduct.tags,
@@ -290,6 +350,25 @@ export const ListingsProvider = ({ children }) => {
     }
 
     return newProduct;
+  };
+
+  const approveListing = async (id) => {
+    setListings(prev => prev.map(item => String(item.id) === String(id) ? { ...item, status: 'Approved' } : item));
+    addNotification({
+      title: 'Listing Approved! 🎉',
+      text: `Your listing has been approved by Admin and is now live on SecondLife Marketplace.`,
+      type: 'listing'
+    });
+    try {
+      await supabase.from('listings').update({ status: 'approved' }).eq('id', id);
+    } catch (e) {}
+  };
+
+  const rejectListing = async (id) => {
+    setListings(prev => prev.map(item => String(item.id) === String(id) ? { ...item, status: 'Rejected' } : item));
+    try {
+      await supabase.from('listings').update({ status: 'rejected' }).eq('id', id);
+    } catch (e) {}
   };
 
   const updateListing = async (id, updatedFields) => {
@@ -327,7 +406,7 @@ export const ListingsProvider = ({ children }) => {
   };
 
   // ─────────────────────────────────────────────────────────
-  // 8. Merge this user's active listings into buyer marketplace
+  // 8. Merge this user's active/approved listings into buyer marketplace
   // ─────────────────────────────────────────────────────────
   const getSellerProfile = () => {
     try {
@@ -345,7 +424,7 @@ export const ListingsProvider = ({ children }) => {
   const totalSalesCount = listings.filter(i => i.status === 'Sold').length + orders.length;
 
   const activeSellerProductsForBuyer = listings
-    .filter(item => item.status === 'Active')
+    .filter(item => item.status === 'Approved' || item.status === 'Active')
     .map(item => ({
       id: `seller-${item.id}`,
       originalId: item.id,
@@ -375,7 +454,8 @@ export const ListingsProvider = ({ children }) => {
       userId,
       listings, setListings,
       orders, setOrders,
-      addListing, updateListing, deleteListing,
+      reviews, setReviews, addSellerReviewReply,
+      addListing, updateListing, deleteListing, approveListing, rejectListing,
       allMarketplaceProducts, activeSellerProductsForBuyer,
       notifications, addNotification, markNotificationRead, markAllNotificationsRead,
       conversations, setConversations, sendBuyerMessage, sendSellerReply,

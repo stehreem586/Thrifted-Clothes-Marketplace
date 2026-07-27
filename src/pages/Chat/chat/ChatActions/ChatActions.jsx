@@ -1,7 +1,8 @@
 import React from 'react';
+import { ShieldAlert } from 'lucide-react';
 import './ChatActions.css';
 
-const ChatActions = ({ onCall, onVideo, onMore }) => {
+const ChatActions = ({ onCall, onVideo, onReport, onMore }) => {
   return (
     <div className="chat-actions">
       <button type="button" className="action-icon-btn" onClick={onCall} aria-label="Phone Call">
@@ -14,6 +15,16 @@ const ChatActions = ({ onCall, onVideo, onMore }) => {
           <polygon points="23 7 16 12 23 17 23 7"></polygon>
           <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
         </svg>
+      </button>
+      <button
+        type="button"
+        className="action-icon-btn"
+        onClick={onReport}
+        title="Report User / Buyer"
+        aria-label="Report User"
+        style={{ color: '#dc2626' }}
+      >
+        <ShieldAlert size={18} />
       </button>
       <button type="button" className="action-icon-btn" onClick={onMore} aria-label="More Options">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

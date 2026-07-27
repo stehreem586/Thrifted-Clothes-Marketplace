@@ -1,133 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { supabase } from '../../utils/supabaseClient';
+import { useModeration } from '../../context/ModerationContext';
+import { useAuth } from '../../context/AuthContext';
 import {
-  Search, Shield, AlertTriangle, Activity, Eye, SlidersHorizontal, Plus,
-  MoreVertical, CheckCircle, XCircle, UserPlus, ShieldCheck, UserX, Users
+  Search, AlertTriangle, Eye, Plus,
+  MoreVertical, CheckCircle, XCircle, UserPlus, ShieldCheck, UserX, Users, X, Award, ChevronDown
 } from 'lucide-react';
+import ActionConfirmModal from '../../components/common/ActionConfirmModal';
 import './Community.css';
 
-// ── Mock User Data (with Unsplash Avatars) ──
-const users = [
-  {
-    id: 1,
-    name: 'Elena Rodriguez',
-    email: 'elenr@yourmail.com',
-    role: 'Seller',
-    joined: 'Oct 12, 2023',
-    listings: 142,
-    status: 'Clear',
-    statusType: 'clear',
-    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=100&h=100&q=80',
-  },
-  {
-    id: 2,
-    name: 'Marcus Thorne',
-    email: 'm.thorne@domane.co',
-    role: 'Buyer',
-    joined: 'Jan 03, 2024',
-    listings: 0,
-    status: '3 Reports',
-    statusType: 'reports',
-    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=100&h=100&q=80',
-  },
-  {
-    id: 3,
-    name: 'Sasha Kim',
-    email: 'skim_vin@gmail.com',
-    role: 'Seller',
-    joined: 'Nov 22, 2023',
-    listings: 88,
-    status: 'Clear',
-    statusType: 'clear',
-    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=100&h=100&q=80',
-  },
-  {
-    id: 4,
-    name: 'Julian Vance',
-    email: 'ujance@outlook.com',
-    role: 'Buyer',
-    joined: 'Mar 12, 2024',
-    listings: 4,
-    status: 'Flagged',
-    statusType: 'flagged',
-    avatar: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=100&h=100&q=80',
-  },
-  {
-    id: 5,
-    name: 'Liam O\'Connor',
-    email: 'loignnerackon.co',
-    role: null,
-    joined: 'Aug 18, 2024',
-    listings: 0,
-    status: 'BANNED',
-    statusType: 'banned',
-    avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=100&h=100&q=80',
-    dimmed: true,
-  },
-];
-
-// ── Mock Team Data ──
-const teamMembers = [
-  {
-    id: 1,
-    name: 'Elena Arts',
-    email: 'earts@secondlife.com',
-    role: 'Super admin',
-    roleType: 'super',
-    status: 'Active',
-    lastActive: '5 mins ago',
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=100&h=100&q=80',
-  },
-  {
-    id: 2,
-    name: 'Marcus Wong',
-    email: 'm.wong@secondlife.com',
-    role: 'Moderator',
-    roleType: 'moderator',
-    status: 'Active',
-    lastActive: '1 hour ago',
-    avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=100&h=100&q=80',
-  },
-  {
-    id: 3,
-    name: 'Sarah Fisher',
-    email: 's.fisher@paceslife.com',
-    role: 'Support',
-    roleType: 'support',
-    status: 'Away',
-    lastActive: '2 hours ago',
-    avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=100&h=100&q=80',
-  },
-];
-
 const permissionMatrix = [
-  {
-    section: 'Financial Reports',
-    desc: 'Revenue payouts and bank statements.',
-    superAdmin: 'full',
-    moderator: 'none',
-    support: 'view',
-  },
-  {
-    section: 'Listing Moderation',
-    desc: 'Approve or reject community listings.',
-    superAdmin: 'full',
-    moderator: 'full',
-    support: 'view',
-  },
-  {
-    section: 'Customer Dispute Resolution',
-    desc: 'Access to user chat logs and submit resolution.',
-    superAdmin: 'full',
-    moderator: 'full',
-    support: 'full',
-  },
-  {
-    section: 'Team Management',
-    desc: 'Add/Remove admins and change roles.',
-    superAdmin: 'full',
-    moderator: 'none',
-    support: 'none',
-  },
+  { section: 'Financial Reports', desc: 'Revenue payouts and bank statements.', superAdmin: 'full', moderator: 'none', support: 'view' },
+  { section: 'Listing Moderation', desc: 'Approve or reject community listings.', superAdmin: 'full', moderator: 'full', support: 'view' },
+  { section: 'Customer Dispute Resolution', desc: 'Access to user chat logs and submit resolution.', superAdmin: 'full', moderator: 'full', support: 'full' },
+  { section: 'Team Management', desc: 'Add/Remove admins and change roles.', superAdmin: 'full', moderator: 'none', support: 'none' },
 ];
 
 const permIcon = (level) => {
@@ -136,61 +22,277 @@ const permIcon = (level) => {
   return <XCircle size={16} color="#d1d5db" strokeWidth={2} />;
 };
 
-const roleCards = [
-  {
-    icon: '⚡',
-    title: 'Super Admins',
-    count: '3 Active',
-    countColor: 'green',
-    desc: 'Full access to all system settings and controls. Handles financial data.',
-  },
-  {
-    icon: '🛡️',
-    title: 'Moderators',
-    count: '12 Active',
-    countColor: 'blue',
-    desc: 'Responsible for maintaining listing quality and dispute mediation.',
-  },
-  {
-    icon: '🎧',
-    title: 'Support Agents',
-    count: '26 Active',
-    countColor: 'gray',
-    desc: 'Assisting users, scale sellers and store account management.',
-  },
-];
+const isTrustedSeller = (u) =>
+  u.role === 'seller' && (u.completed_orders || 0) >= 15 && (u.avg_rating || 0) >= 4.5;
+
+const avatarUrl = (u) =>
+  u.avatar_url ||
+  `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name || u.email || 'U')}&background=1a1a2e&color=fff&size=80`;
+
+const teamRoleLabel = (role) => {
+  if (role === 'super_admin') return 'Super Admin';
+  if (role === 'moderator')   return 'Moderator';
+  if (role === 'supporter')   return 'Supporter';
+  if (role === 'admin')       return 'Admin';
+  return role || 'Staff';
+};
+
+const teamRoleType = (role) => {
+  if (role === 'super_admin' || role === 'admin') return 'super';
+  if (role === 'moderator')   return 'moderator';
+  return 'support';
+};
+
+const userStatusLabel = (u) => {
+  if (u.status === 'banned')  return { label: 'BANNED',  type: 'banned' };
+  if (u.status === 'flagged') return { label: 'Flagged', type: 'flagged' };
+  const warns = u.warnings_count || 0;
+  if (warns > 0) return { label: `${warns} Warning${warns > 1 ? 's' : ''}`, type: 'reports' };
+  return { label: 'Active', type: 'clear' };
+};
+
+const PAGE_SIZE = 4;
+const FILTERS = ['All', 'Buyers', 'Sellers', 'Trusted'];
 
 export default function Community() {
-  const [activeTab, setActiveTab] = useState('users'); // 'users' or 'team'
-  const [activeFilter, setActiveFilter] = useState('All');
-  const [search, setSearch] = useState('');
+  const { takeModerationAction } = useModeration();
+  const { showToast } = useAuth();
 
-  const filteredUsers = users.filter(u => {
-    const matchSearch =
-      u.name.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase());
-    const matchRole =
-      activeFilter === 'All' ||
-      (activeFilter === 'Buyers' && u.role === 'Buyer') ||
-      (activeFilter === 'Sellers' && u.role === 'Seller');
-    return matchSearch && matchRole;
+  const [allUsers, setAllUsers]   = useState([]);
+  const [teamList, setTeamList]   = useState([]);
+  const [reportsCount, setReportsCount] = useState(0);
+
+  const [activeTab, setActiveTab]       = useState('users');
+  const [activeFilter, setActiveFilter] = useState('All');
+  const [filterOpen, setFilterOpen]     = useState(false);
+  const [search, setSearch]             = useState('');
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  const [inspectedUser, setInspectedUser]   = useState(null);
+  const [warningUser, setWarningUser]       = useState(null);
+  const [warningReason, setWarningReason]   = useState('');
+  const [actionConfirmConfig, setActionConfirmConfig] = useState({ isOpen: false });
+  const [openMenuUserId, setOpenMenuUserId] = useState(null);
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [newInvite, setNewInvite] = useState({ name: '', email: '', role: 'Moderator' });
+
+  // Fetch silently in background — no loading screen
+  const fetchData = useCallback(async () => {
+    try {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      const adminRoles = ['admin', 'super_admin', 'moderator', 'supporter'];
+      setAllUsers((profiles || []).filter(p => !adminRoles.includes(p.role)));
+      setTeamList((profiles || []).filter(p =>  adminRoles.includes(p.role)));
+    } catch (err) {
+      console.warn('Community profile fetch:', err.message);
+    }
+
+    try {
+      const { count } = await supabase
+        .from('reports')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'open');
+      setReportsCount(count || 0);
+    } catch (_) {}
+  }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+  // Reset visible count when filter/search changes
+  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [activeFilter, search]);
+
+  // Metrics
+  const totalUsersCount     = allUsers.length;
+  const sellersCount        = allUsers.filter(u => u.role === 'seller').length;
+  const buyersCount         = allUsers.filter(u => u.role === 'buyer').length;
+  const trustedSellersCount = allUsers.filter(isTrustedSeller).length;
+
+  // Filtered users
+  const filteredUsers = allUsers.filter(u => {
+    const q = search.toLowerCase();
+    const match = (u.name || '').toLowerCase().includes(q) ||
+                  (u.email || '').toLowerCase().includes(q) ||
+                  (u.username || '').toLowerCase().includes(q) ||
+                  (u.city || '').toLowerCase().includes(q);
+    if (!match) return false;
+    if (activeFilter === 'Buyers')  return u.role === 'buyer';
+    if (activeFilter === 'Sellers') return u.role === 'seller';
+    if (activeFilter === 'Trusted') return isTrustedSeller(u);
+    return true;
   });
+
+  const visibleUsers = filteredUsers.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredUsers.length;
+
+  const filteredTeam = teamList.filter(m => {
+    const q = search.toLowerCase();
+    return (m.name || '').toLowerCase().includes(q) || (m.email || '').toLowerCase().includes(q);
+  });
+
+  // Actions
+  const handleIssueWarningSubmit = async (e) => {
+    e.preventDefault();
+    if (!warningUser) return;
+    const newWarns = (warningUser.warnings_count || 0) + 1;
+    await supabase.from('profiles').update({ warnings_count: newWarns, status: 'flagged' }).eq('id', warningUser.id);
+    setAllUsers(prev => prev.map(u => u.id === warningUser.id ? { ...u, warnings_count: newWarns, status: 'flagged' } : u));
+    takeModerationAction({ reportId: `WARN-${warningUser.id}`, actionType: 'send_warning', moderatorName: 'Admin', reason: warningReason });
+    if (showToast) showToast(`Warning issued to ${warningUser.name}`);
+    setWarningUser(null); setWarningReason('');
+  };
+
+  const handleBanUserConfirm = async () => {
+    const t = actionConfirmConfig.targetUser; if (!t) return;
+    await supabase.from('profiles').update({ status: 'banned' }).eq('id', t.id);
+    setAllUsers(prev => prev.map(u => u.id === t.id ? { ...u, status: 'banned' } : u));
+    takeModerationAction({ reportId: `BAN-${t.id}`, actionType: 'ban_user', moderatorName: 'Admin', reason: 'Banned' });
+    if (showToast) showToast(`${t.name || t.email} has been banned.`);
+  };
+
+  const handleChangeTeamRole = async (memberId, newRoleType) => {
+    await supabase.from('profiles').update({ role: newRoleType }).eq('id', memberId);
+    setTeamList(prev => prev.map(m => m.id === memberId ? { ...m, role: newRoleType } : m));
+    setOpenMenuUserId(null);
+    if (showToast) showToast(`Role updated to ${teamRoleLabel(newRoleType)}`);
+  };
+
+  const handleInviteSubmit = (e) => {
+    e.preventDefault();
+    if (showToast) showToast(`Invitation sent to ${newInvite.email} as ${newInvite.role}`);
+    setInviteModalOpen(false);
+    setNewInvite({ name: '', email: '', role: 'Moderator' });
+  };
 
   return (
     <div className="community-root">
-      {/* Tab Switcher */}
+
+      <ActionConfirmModal
+        isOpen={actionConfirmConfig.isOpen}
+        onClose={() => setActionConfirmConfig({ isOpen: false })}
+        title={actionConfirmConfig.title}
+        message={actionConfirmConfig.message}
+        confirmVariant="danger"
+        onConfirm={handleBanUserConfirm}
+      />
+
+      {/* Profile Inspector */}
+      {inspectedUser && (
+        <div className="report-modal-overlay" onClick={() => setInspectedUser(null)}>
+          <div className="report-modal-card" style={{ maxWidth: '520px' }} onClick={e => e.stopPropagation()}>
+            <div className="report-modal-header">
+              <div className="report-title-wrap">
+                <img src={avatarUrl(inspectedUser)} alt="avatar" style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover' }} />
+                <div>
+                  <h3 style={{ margin: 0 }}>{inspectedUser.name || 'Unnamed User'}</h3>
+                  <p className="report-subtitle">@{inspectedUser.username || '—'} · {inspectedUser.email}</p>
+                </div>
+              </div>
+              <button className="report-modal-close" onClick={() => setInspectedUser(null)}><X size={18} /></button>
+            </div>
+            <div className="report-modal-form" style={{ padding: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                <div><span style={{ fontSize: '0.75rem', color: '#64748b' }}>Role</span><p style={{ fontWeight: '700', margin: '2px 0 0', textTransform: 'capitalize' }}>{inspectedUser.role || 'buyer'}</p></div>
+                <div><span style={{ fontSize: '0.75rem', color: '#64748b' }}>City</span><p style={{ fontWeight: '700', margin: '2px 0 0' }}>📍 {inspectedUser.city || 'Not set'}</p></div>
+                <div><span style={{ fontSize: '0.75rem', color: '#64748b' }}>Joined</span><p style={{ fontWeight: '700', margin: '2px 0 0' }}>{inspectedUser.created_at ? new Date(inspectedUser.created_at).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</p></div>
+                <div><span style={{ fontSize: '0.75rem', color: '#64748b' }}>Status</span><p style={{ fontWeight: '700', margin: '2px 0 0', color: inspectedUser.status === 'banned' ? '#dc2626' : '#059669', textTransform: 'capitalize' }}>{inspectedUser.status || 'Active'}</p></div>
+              </div>
+              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '12px 14px', borderRadius: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#166534' }}>SELLER METRICS</span>
+                  {isTrustedSeller(inspectedUser) && <span style={{ fontSize: '0.75rem', fontWeight: '700', background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}><Award size={12} /> Trusted Seller</span>}
+                </div>
+                <div style={{ display: 'flex', gap: '20px', marginTop: '8px' }}>
+                  <div><span style={{ fontSize: '0.75rem', color: '#166534' }}>Orders</span><p style={{ fontSize: '1.1rem', fontWeight: '700', color: '#14532d', margin: 0 }}>{inspectedUser.completed_orders || 0}</p></div>
+                  <div><span style={{ fontSize: '0.75rem', color: '#166534' }}>Rating</span><p style={{ fontSize: '1.1rem', fontWeight: '700', color: '#14532d', margin: 0 }}>★ {inspectedUser.avg_rating ? Number(inspectedUser.avg_rating).toFixed(1) : 'N/A'}</p></div>
+                  <div><span style={{ fontSize: '0.75rem', color: '#166534' }}>Listings</span><p style={{ fontSize: '1.1rem', fontWeight: '700', color: '#14532d', margin: 0 }}>{inspectedUser.listings_count || 0}</p></div>
+                </div>
+              </div>
+              <div style={{ fontSize: '0.82rem', color: '#991b1b', background: '#fee2e2', padding: '10px 12px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between' }}>
+                <span>Warnings on Record:</span><strong>{inspectedUser.warnings_count || 0}</strong>
+              </div>
+              <div className="report-modal-actions" style={{ marginTop: '14px' }}>
+                <button className="report-cancel-btn" onClick={() => setInspectedUser(null)}>Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Warning Modal */}
+      {warningUser && (
+        <div className="report-modal-overlay" onClick={() => setWarningUser(null)}>
+          <div className="report-modal-card" onClick={e => e.stopPropagation()}>
+            <div className="report-modal-header">
+              <div className="report-title-wrap">
+                <AlertTriangle size={20} className="report-modal-icon" />
+                <div>
+                  <h3>Issue Warning to {warningUser.name}</h3>
+                  <p className="report-subtitle">{warningUser.email} · Warnings: {warningUser.warnings_count || 0}</p>
+                </div>
+              </div>
+              <button className="report-modal-close" onClick={() => setWarningUser(null)}><X size={18} /></button>
+            </div>
+            <form onSubmit={handleIssueWarningSubmit} className="report-modal-form">
+              <div className="report-form-group">
+                <label htmlFor="warningExplanationInput">Warning Explanation *</label>
+                <textarea id="warningExplanationInput" rows={4} required placeholder="Explain the policy violation..." value={warningReason} onChange={e => setWarningReason(e.target.value)} />
+              </div>
+              <div className="report-modal-actions">
+                <button type="button" className="report-cancel-btn" onClick={() => setWarningUser(null)}>Cancel</button>
+                <button type="submit" className="report-submit-btn" style={{ backgroundColor: '#d97706' }}>Issue Warning</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Invite Modal */}
+      {inviteModalOpen && (
+        <div className="report-modal-overlay" onClick={() => setInviteModalOpen(false)}>
+          <div className="report-modal-card" onClick={e => e.stopPropagation()}>
+            <div className="report-modal-header">
+              <div className="report-title-wrap">
+                <UserPlus size={20} style={{ color: '#0284c7' }} />
+                <div><h3>Invite Team Member</h3><p className="report-subtitle">Grant admin privileges to staff.</p></div>
+              </div>
+              <button className="report-modal-close" onClick={() => setInviteModalOpen(false)}><X size={18} /></button>
+            </div>
+            <form onSubmit={handleInviteSubmit} className="report-modal-form">
+              <div className="report-form-group">
+                <label htmlFor="inviteNameInput">Full Name *</label>
+                <input id="inviteNameInput" type="text" required placeholder="e.g. Zainab Malik" value={newInvite.name} onChange={e => setNewInvite({ ...newInvite, name: e.target.value })} style={{ padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '8px' }} />
+              </div>
+              <div className="report-form-group">
+                <label htmlFor="inviteEmailInput">Email *</label>
+                <input id="inviteEmailInput" type="email" required placeholder="name@secondlife.com" value={newInvite.email} onChange={e => setNewInvite({ ...newInvite, email: e.target.value })} style={{ padding: '9px 12px', border: '1px solid #cbd5e1', borderRadius: '8px' }} />
+              </div>
+              <div className="report-form-group">
+                <label htmlFor="inviteRoleSelect">Role *</label>
+                <select id="inviteRoleSelect" value={newInvite.role} onChange={e => setNewInvite({ ...newInvite, role: e.target.value })}>
+                  <option value="Super Admin">Super Admin</option>
+                  <option value="Moderator">Moderator</option>
+                  <option value="Supporter">Support Agent</option>
+                </select>
+              </div>
+              <div className="report-modal-actions">
+                <button type="button" className="report-cancel-btn" onClick={() => setInviteModalOpen(false)}>Cancel</button>
+                <button type="submit" className="report-submit-btn" style={{ backgroundColor: '#1a1a2e' }}>Send Invitation</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Tab Switcher — no counts */}
       <div className="page-level-tabs">
-        <button
-          className={`page-tab-btn ${activeTab === 'users' ? 'active' : ''}`}
-          onClick={() => { setActiveTab('users'); setSearch(''); }}
-        >
+        <button className={`page-tab-btn ${activeTab === 'users' ? 'active' : ''}`} onClick={() => { setActiveTab('users'); setSearch(''); setVisibleCount(PAGE_SIZE); }}>
           User Management
         </button>
-        <button
-          className={`page-tab-btn ${activeTab === 'team' ? 'active' : ''}`}
-          onClick={() => { setActiveTab('team'); setSearch(''); }}
-        >
-          Team Management
+        <button className={`page-tab-btn ${activeTab === 'team' ? 'active' : ''}`} onClick={() => { setActiveTab('team'); setSearch(''); }}>
+          Team &amp; Staff
         </button>
       </div>
 
@@ -200,202 +302,217 @@ export default function Community() {
           <div className="comm-header">
             <div>
               <h1 className="page-title">User Management</h1>
-              <p className="page-sub">Monitor, filter, and moderate the SecondLife community.</p>
+              <p className="page-sub">Monitor and moderate community members &amp; trusted sellers.</p>
             </div>
             <div className="total-users-badge">
-              <span className="total-big">12,482</span>
+              <span className="total-big">{totalUsersCount}</span>
               <span className="total-label">Total Users</span>
-              <span className="total-sub">+9% New today</span>
+              <span className="total-sub">{sellersCount} sellers · {buyersCount} buyers</span>
             </div>
           </div>
 
-          {/* User table card */}
+          {/* Table Card */}
           <div className="comm-table-card">
             <div className="comm-table-toolbar">
+              {/* Search */}
               <div className="comm-search-wrap">
                 <Search size={14} className="search-icon" />
-                <input
-                  type="text"
-                  placeholder="Search by name, email, or user ID…"
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                />
+                <input type="text" placeholder="Search by name, email, city…" value={search} onChange={e => setSearch(e.target.value)} />
               </div>
-              <div className="filter-group">
-                <span className="filter-label">Filter by Role:</span>
-                {['All', 'Buyers', 'Sellers'].map(t => (
-                  <button
-                    key={t}
-                    className={`filter-btn ${activeFilter === t ? 'active' : ''}`}
-                    onClick={() => setActiveFilter(t)}
-                  >
-                    {t}
-                  </button>
-                ))}
+
+              {/* Filter Dropdown Toggle */}
+              <div style={{ position: 'relative' }}>
+                <button
+                  className="adv-filter-btn"
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: activeFilter !== 'All' ? '700' : '500', borderColor: activeFilter !== 'All' ? '#1a1a2e' : undefined }}
+                  onClick={() => setFilterOpen(p => !p)}
+                >
+                  {activeFilter === 'All' ? 'Filter' : activeFilter === 'Trusted' ? '★ Trusted Sellers' : activeFilter}
+                  <ChevronDown size={13} style={{ transform: filterOpen ? 'rotate(180deg)' : 'none', transition: '0.2s' }} />
+                </button>
+                {filterOpen && (
+                  <div className="filter-dropdown-list">
+                    {FILTERS.map(f => (
+                      <button
+                        key={f}
+                        className={`filter-dropdown-item ${activeFilter === f ? 'active' : ''}`}
+                        onClick={() => { setActiveFilter(f); setFilterOpen(false); setVisibleCount(PAGE_SIZE); }}
+                      >
+                        {f === 'Trusted' ? '★ Trusted Sellers' : f}
+                        {activeFilter === f && <CheckCircle size={13} color="#059669" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-              <button className="adv-filter-btn"><SlidersHorizontal size={13} style={{ marginRight: '4px' }} /> Advanced Filters</button>
             </div>
 
-            <table className="comm-table">
-              <thead>
-                <tr>
-                  <th>USER</th>
-                  <th>ROLE</th>
-                  <th>JOINED</th>
-                  <th>LISTINGS</th>
-                  <th>STATUS</th>
-                  <th>ACTIONS</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.map(u => (
-                  <tr key={u.id} className={u.dimmed ? 'dimmed-row' : ''}>
-                    <td>
-                      <div className="user-cell">
-                        <img src={u.avatar} alt={u.name} className="user-avatar-img" />
-                        <div>
-                          <p className="user-name">{u.name}</p>
-                          <p className="user-email">{u.email}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      {u.role ? (
-                        <span className={`role-pill ${u.role.toLowerCase()}`}>{u.role}</span>
-                      ) : (
-                        <span className="role-pill banned-role">—</span>
-                      )}
-                    </td>
-                    <td className="date-cell">{u.joined}</td>
-                    <td className="num-cell">{u.listings}</td>
-                    <td>
-                      <span className={`user-status ${u.statusType}`}>
-                        {u.statusType !== 'banned' && '● '}
-                        {u.status}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="user-actions">
-                        <button className="ua-btn" title="View"><Eye size={13} /></button>
-                        <button className="ua-btn" title="Warning"><AlertTriangle size={13} /></button>
-                        <button className="ua-btn" title="More"><MoreVertical size={13} /></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <div className="table-footer">
-              <p>Showing 1–5 of 12,482 users</p>
-              <div className="pagination">
-                <button>‹</button>
-                <button className="pg-active">1</button>
-                <button>2</button>
-                <button>3</button>
-                <span>…</span>
-                <button>1049</button>
-                <button>›</button>
+            {filteredUsers.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
+                <Users size={32} style={{ marginBottom: '8px', opacity: 0.4 }} />
+                <p>{totalUsersCount === 0 ? 'No users have signed up yet.' : `No users match "${search}".`}</p>
               </div>
-            </div>
+            ) : (
+              <>
+                <table className="comm-table">
+                  <thead>
+                    <tr>
+                      <th>USER</th>
+                      <th>ROLE</th>
+                      <th>JOINED</th>
+                      <th>SALES / RATING</th>
+                      <th>STATUS</th>
+                      <th>ACTIONS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleUsers.map(u => {
+                      const trusted = isTrustedSeller(u);
+                      const { label: statusLabel, type: statusType } = userStatusLabel(u);
+                      return (
+                        <tr key={u.id} className={u.status === 'banned' ? 'dimmed-row' : ''}>
+                          <td>
+                            <div className="user-cell">
+                              <img src={avatarUrl(u)} alt={u.name} className="user-avatar-img" />
+                              <div>
+                                <p className="user-name">
+                                  {u.name || u.email}
+                                  {trusted && <span className="trusted-star-badge">★ Trusted</span>}
+                                </p>
+                                <p className="user-email">{u.email}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td><span className={`role-pill ${u.role || 'buyer'}`} style={{ textTransform: 'capitalize' }}>{u.role || 'buyer'}</span></td>
+                          <td className="date-cell">{u.created_at ? new Date(u.created_at).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</td>
+                          <td className="num-cell">
+                            {u.role === 'seller'
+                              ? <span>{u.completed_orders || 0} orders · ★ {u.avg_rating ? Number(u.avg_rating).toFixed(1) : '—'}</span>
+                              : <span style={{ color: '#94a3b8' }}>Buyer</span>}
+                          </td>
+                          <td><span className={`user-status ${statusType}`}>{statusType !== 'banned' && '● '}{statusLabel}</span></td>
+                          <td>
+                            <div className="user-actions">
+                              <button className="ua-btn" title="View Profile" onClick={() => setInspectedUser(u)}><Eye size={14} /></button>
+                              <button className="ua-btn warn-icon-btn" title="Issue Warning" onClick={() => setWarningUser(u)}><AlertTriangle size={14} /></button>
+                              <button className="ua-btn ban-icon-btn" title="Ban User" onClick={() => setActionConfirmConfig({ isOpen: true, targetUser: u, title: `Ban: ${u.name || u.email}`, message: 'This will permanently block marketplace access.' })}><XCircle size={14} /></button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+
+                {/* View More */}
+                <div className="table-footer">
+                  <p>Showing {visibleUsers.length} of {filteredUsers.length} users</p>
+                  {hasMore && (
+                    <button className="adv-filter-btn" onClick={() => setVisibleCount(c => c + PAGE_SIZE)}>
+                      View More ({filteredUsers.length - visibleCount} remaining)
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
           </div>
 
-          {/* Bottom stat cards with proper icons */}
+          {/* Stats */}
           <div className="comm-bottom-stats">
-            <div className="cbstat green">
+            <div className="cbstat">
               <span className="cbstat-icon-wrap green"><ShieldCheck size={20} /></span>
               <div>
                 <p className="cbstat-label">TRUSTED SELLERS</p>
-                <p className="cbstat-val">2,841</p>
+                <p className="cbstat-val">{trustedSellersCount}</p>
+                <p className="cbstat-hint">15+ orders &amp; 4.5+ rating</p>
               </div>
-              <span className="cbstat-badge up">+4%</span>
             </div>
-            <div className="cbstat red-card">
+            <div className="cbstat">
               <span className="cbstat-icon-wrap red"><UserX size={20} /></span>
               <div>
-                <p className="cbstat-label">ACTIVE REPORTS</p>
-                <p className="cbstat-val red-val">342</p>
+                <p className="cbstat-label">OPEN REPORTS</p>
+                <p className="cbstat-val red-val">{reportsCount}</p>
+                <p className="cbstat-hint">Pending moderation action</p>
               </div>
-              <span className="cbstat-badge down">-12%</span>
             </div>
-            <div className="cbstat orange-card">
-              <span className="cbstat-icon-wrap orange"><Activity size={20} /></span>
+            <div className="cbstat">
+              <span className="cbstat-icon-wrap orange"><Users size={20} /></span>
               <div>
-                <p className="cbstat-label">MARKET ACTIVITY</p>
-                <p className="cbstat-val">High</p>
-                <p className="cbstat-hint">Peak traffic observed at 8PM GMT</p>
+                <p className="cbstat-label">TOTAL COMMUNITY</p>
+                <p className="cbstat-val">{totalUsersCount}</p>
+                <p className="cbstat-hint">{sellersCount} sellers · {buyersCount} buyers</p>
               </div>
-              <span className="cbstat-badge up">+15%</span>
             </div>
           </div>
         </>
       ) : (
         <>
-          {/* Team Management */}
+          {/* Team */}
           <div className="team-header">
             <div>
-              <h1 className="page-title">Admin Team</h1>
-              <p className="page-sub">Manage your organization's members and their access levels.</p>
+              <h1 className="page-title">Admin Team &amp; Staff</h1>
+              <p className="page-sub">Manage staff members and change roles dynamically.</p>
             </div>
             <div className="team-header-right">
               <div className="team-search-wrap">
                 <Search size={14} className="search-icon" />
-                <input
-                  type="text"
-                  placeholder="Search team members…"
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                />
+                <input type="text" placeholder="Search team…" value={search} onChange={e => setSearch(e.target.value)} />
               </div>
-              <button className="invite-btn"><UserPlus size={14} style={{ marginRight: '6px' }} /> Invite Team Member</button>
+              <button className="invite-btn" onClick={() => setInviteModalOpen(true)}>
+                <UserPlus size={14} style={{ marginRight: '6px' }} /> Invite Member
+              </button>
             </div>
           </div>
 
-          {/* Admin Team table */}
           <div className="team-card">
-            <table className="team-table">
-              <thead>
-                <tr>
-                  <th>MEMBER</th>
-                  <th>ROLE</th>
-                  <th>STATUS</th>
-                  <th>LAST ACTIVE</th>
-                  <th>ACTIONS</th>
-                </tr>
-              </thead>
-              <tbody>
-                {teamMembers
-                  .filter(m =>
-                    m.name.toLowerCase().includes(search.toLowerCase()) ||
-                    m.email.toLowerCase().includes(search.toLowerCase())
-                  )
-                  .map(m => (
+            {filteredTeam.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
+                <p>No staff members found. Assign admin roles in Supabase or invite your first team member.</p>
+              </div>
+            ) : (
+              <table className="team-table">
+                <thead>
+                  <tr>
+                    <th>MEMBER</th>
+                    <th>ROLE</th>
+                    <th>JOINED</th>
+                    <th>ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredTeam.map(m => (
                     <tr key={m.id}>
                       <td>
                         <div className="team-member-cell">
-                          <img src={m.avatar} alt={m.name} className="team-avatar-img" />
+                          <img src={avatarUrl(m)} alt={m.name} className="team-avatar-img" />
                           <div>
-                            <p className="team-member-name">{m.name}</p>
+                            <p className="team-member-name">{m.name || 'Unnamed'}</p>
                             <p className="team-member-email">{m.email}</p>
                           </div>
                         </div>
                       </td>
+                      <td><span className={`team-role-badge ${teamRoleType(m.role)}`}>{teamRoleLabel(m.role)}</span></td>
+                      <td className="team-last-active">{m.created_at ? new Date(m.created_at).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</td>
                       <td>
-                        <span className={`team-role-badge ${m.roleType}`}>{m.role}</span>
-                      </td>
-                      <td>
-                        <span className={`team-status ${m.status.toLowerCase()}`}>
-                          ● {m.status}
-                        </span>
-                      </td>
-                      <td className="team-last-active">{m.lastActive}</td>
-                      <td>
-                        <button className="team-action-btn"><MoreVertical size={15} /></button>
+                        <div style={{ position: 'relative' }}>
+                          <button className="team-action-btn" onClick={() => setOpenMenuUserId(openMenuUserId === m.id ? null : m.id)}>
+                            <MoreVertical size={15} />
+                          </button>
+                          {openMenuUserId === m.id && (
+                            <div className="role-menu-dropdown">
+                              <p className="menu-header">Change Role:</p>
+                              <button onClick={() => handleChangeTeamRole(m.id, 'super_admin')}>Make Super Admin</button>
+                              <button onClick={() => handleChangeTeamRole(m.id, 'moderator')}>Make Moderator</button>
+                              <button onClick={() => handleChangeTeamRole(m.id, 'supporter')}>Make Supporter</button>
+                            </div>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
-              </tbody>
-            </table>
+                </tbody>
+              </table>
+            )}
           </div>
 
           {/* Permission Matrix */}
@@ -403,15 +520,13 @@ export default function Community() {
             <div className="perm-header">
               <div>
                 <p className="team-section-title">Permission Matrix</p>
-                <p className="team-section-sub">Define granular access control for each administrative role.</p>
+                <p className="team-section-sub">Granular access control for each role.</p>
               </div>
-              <button className="edit-roles-btn">Edit Roles</button>
             </div>
-
             <table className="perm-table">
               <thead>
                 <tr>
-                  <th>ADMIN SECTION</th>
+                  <th>SECTION</th>
                   <th className="perm-col">SUPER ADMIN</th>
                   <th className="perm-col">MODERATOR</th>
                   <th className="perm-col">SUPPORT</th>
@@ -432,22 +547,6 @@ export default function Community() {
               </tbody>
             </table>
           </div>
-
-          {/* Role Cards */}
-          <div className="role-cards-row">
-            {roleCards.map(rc => (
-              <div key={rc.title} className="role-card">
-                <div className="role-card-top">
-                  <span className="role-card-icon">{rc.icon}</span>
-                  <span className={`role-count-badge ${rc.countColor}`}>{rc.count}</span>
-                </div>
-                <p className="role-card-title">{rc.title}</p>
-                <p className="role-card-desc">{rc.desc}</p>
-              </div>
-            ))}
-          </div>
-
-          <p className="team-footer-note">© 2026 SecondLife Admin. Admin Dashboard v2.4.0</p>
         </>
       )}
     </div>

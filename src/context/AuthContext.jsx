@@ -144,11 +144,24 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (email, password, staySignedIn = true) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    localStorage.setItem('staySignedIn', String(staySignedIn));
-    sessionStorage.setItem('sessionAlive', 'true');
-    return data;
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      localStorage.setItem('staySignedIn', String(staySignedIn));
+      sessionStorage.setItem('sessionAlive', 'true');
+      
+      setUser(data.user);
+      const prof = await fetchProfile(data.user.id);
+      setProfile(prof);
+      if (prof) localStorage.setItem('userRole', prof.role);
+
+      setLoading(false);
+      return data;
+    } catch (err) {
+      setLoading(false);
+      throw err;
+    }
   };
 
   const loginWithGoogle = async () => {

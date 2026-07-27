@@ -229,14 +229,6 @@
   margin: 0;
 }
 
-.chat-more-btn {
-  background: none;
-  border: none;
-  font-size: 20px;
-  color: #9ca3af;
-  cursor: pointer;
-}
-
 .chat-body-custom {
   padding: 20px;
   display: flex;
@@ -280,18 +272,20 @@
 
 .left-bubble .bubble-text {
   background: #e5e7eb;
-  color: #6b7280;
+  color: #1e293b;
   border-bottom-left-radius: 2px;
 }
 
 .right-bubble .bubble-text {
-  background: #e5e7eb;
-  color: #6b7280;
+  background: #dbeafe;
+  color: #1e3a8a;
   border-bottom-right-radius: 2px;
 }
 
 .disabled-text {
   font-style: italic;
+  color: #94a3b8 !important;
+  background: #f1f5f9 !important;
 }
 
 .bubble-time {
@@ -324,7 +318,29 @@
   font-weight: 500;
   color: #1a1a2e;
   line-height: 1.5;
-  margin: 0;
+  margin: 0 0 8px 0;
+}
+
+.flagged-msg-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.msg-del-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  background: #dc2626;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.msg-del-btn:hover {
+  background: #b91c1c;
 }
 
 /* Action buttons under chat */
@@ -447,18 +463,21 @@
   margin: 0;
 }
 
-.policy-link {
+.policy-link-btn {
   font-size: 12.5px;
   font-weight: 600;
   color: #b45309;
-  text-decoration: none;
+  background: transparent;
+  border: none;
   display: inline-flex;
   align-items: center;
   gap: 4px;
   margin-top: 4px;
+  cursor: pointer;
+  padding: 0;
 }
 
-.policy-link:hover { text-decoration: underline; }
+.policy-link-btn:hover { text-decoration: underline; }
 
 /* Footer stats */
 .chat-oversight-footer {

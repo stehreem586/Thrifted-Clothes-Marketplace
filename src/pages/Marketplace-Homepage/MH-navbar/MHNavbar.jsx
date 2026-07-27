@@ -242,7 +242,17 @@ const MHNavbar = () => {
             </div>
 
             <div className="mh-actions-divider"></div>
-            <button className="mh-sell-btn" onClick={handleSellClick}>Sell an Item</button>
+            {profile?.role === 'admin' || user?.user_metadata?.role === 'admin' || localStorage.getItem('userRole') === 'admin' ? (
+              <button
+                className="mh-sell-btn mh-admin-btn"
+                onClick={() => navigate('/admin')}
+                style={{ background: '#ad7f45', color: '#ffffff', fontWeight: '600' }}
+              >
+                Admin Portal
+              </button>
+            ) : (
+              <button className="mh-sell-btn" onClick={handleSellClick}>Sell an Item</button>
+            )}
           </div>
         </div>
       </nav>
