@@ -36,10 +36,6 @@ function Inventory({ inventorySearch, onNavigateToProfile }) {
   };
 
   const handleOpenCreate = () => {
-    if (!isProfileComplete()) {
-      setShowProfileRequiredModal(true);
-      return;
-    }
     setEditingListing(null);
     setFormTitle(''); setFormCategory(''); setFormCondition('');
     setFormDescription(''); setFormPrice(''); setFormSize('');
@@ -87,10 +83,6 @@ function Inventory({ inventorySearch, onNavigateToProfile }) {
 
   const handleFormSubmit = async (e, status) => {
     e.preventDefault();
-    if (!isProfileComplete()) {
-      setShowProfileRequiredModal(true);
-      return;
-    }
     if (!formTitle || !formPrice) { alert('Please fill out Title and Price fields.'); return; }
     const priceNum = parseFloat(formPrice);
     if (isNaN(priceNum)) { alert('Price must be a valid number.'); return; }
@@ -102,7 +94,7 @@ function Inventory({ inventorySearch, onNavigateToProfile }) {
         category: formCategory || 'Other',
         size: formSize || 'OS',
         price: priceNum,
-        status,
+        status: status === 'Draft' ? 'Draft' : 'Pending',
         condition: formCondition || 'Good',
         description: formDescription,
         tags: formTags,
@@ -114,7 +106,7 @@ function Inventory({ inventorySearch, onNavigateToProfile }) {
         category: formCategory,
         size: formSize,
         price: priceNum,
-        status: status === 'Draft' ? 'Draft' : 'Active',
+        status: status === 'Draft' ? 'Draft' : editingListing.status || 'Pending',
         condition: formCondition,
         description: formDescription,
         tags: formTags,
@@ -125,14 +117,16 @@ function Inventory({ inventorySearch, onNavigateToProfile }) {
     setEditingListing(null);
   };
 
-  const activeCount = listings.filter(i => i.status === 'Active').length;
-  const soldCount   = listings.filter(i => i.status === 'Sold').length;
-  const draftCount  = listings.filter(i => i.status === 'Draft').length;
+  const pendingCount  = listings.filter(i => i.status === 'Pending').length;
+  const approvedCount = listings.filter(i => i.status === 'Approved' || i.status === 'Active').length;
+  const soldCount     = listings.filter(i => i.status === 'Sold').length;
+  const draftCount    = listings.filter(i => i.status === 'Draft').length;
 
   const filteredListings = listings.filter(item => {
-    if (listingFilter === 'Active' && item.status !== 'Active') return false;
-    if (listingFilter === 'Sold'   && item.status !== 'Sold')   return false;
-    if (listingFilter === 'Drafts' && item.status !== 'Draft')  return false;
+    if (listingFilter === 'Pending'  && item.status !== 'Pending')  return false;
+    if (listingFilter === 'Approved' && (item.status !== 'Approved' && item.status !== 'Active')) return false;
+    if (listingFilter === 'Sold'     && item.status !== 'Sold')     return false;
+    if (listingFilter === 'Drafts'   && item.status !== 'Draft')    return false;
     if (inventorySearch && inventorySearch.trim() !== '') {
       const term = inventorySearch.toLowerCase();
       return item.title.toLowerCase().includes(term) || item.category.toLowerCase().includes(term);
@@ -165,7 +159,7 @@ function Inventory({ inventorySearch, onNavigateToProfile }) {
         {/* Filter & Sort */}
         <div className="filter-sort-row">
           <div className="tab-filters">
-            {[['All', listings.length], ['Active', activeCount], ['Sold', soldCount], ['Drafts', draftCount]].map(([label, count]) => (
+            {[['All', listings.length], ['Pending', pendingCount], ['Approved', approvedCount], ['Sold', soldCount], ['Drafts', draftCount]].map(([label, count]) => (
               <button key={label} className={`filter-tab ${listingFilter === label ? 'active' : ''}`}
                 onClick={() => { setListingFilter(label); setCurrentPage(1); }}>
                 {label} <span className="tab-count">{count}</span>
@@ -211,9 +205,13 @@ function Inventory({ inventorySearch, onNavigateToProfile }) {
                     <td className="price-cell"><strong>PKR {parseFloat(product.price).toLocaleString()}</strong></td>
                     <td>
                       <span className={`status-pill ${
-                        product.status === 'Active' ? 'active-listing' :
-                        product.status === 'Sold'   ? 'sold-listing'   : 'draft-listing'
-                      }`}>{product.status}</span>
+                        product.status === 'Pending'  ? 'pending-listing'  :
+                        (product.status === 'Approved' || product.status === 'Active') ? 'active-listing' :
+                        product.status === 'Sold'      ? 'sold-listing'     : 'draft-listing'
+                      }`} style={{
+                        background: product.status === 'Pending' ? '#fef3c7' : undefined,
+                        color: product.status === 'Pending' ? '#b45309' : undefined
+                      }}>{product.status || 'Pending'}</span>
                     </td>
                     <td>
                       {product.status === 'Draft' ? (

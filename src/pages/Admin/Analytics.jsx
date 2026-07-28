@@ -1,181 +1,245 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Filter, Download, User, Clock, ChevronLeft, ChevronRight,
-  Shield, AlertOctagon, RotateCcw, Trash2, Edit3
+  Shield, AlertOctagon, Trash2, Edit3, CheckCircle, TrendingUp
 } from 'lucide-react';
+import { useListings } from '../../context/ListingsContext';
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../utils/supabaseClient';
 import './Analytics.css';
-
-const logs = [
-  {
-    id: 1,
-    timestamp: 'Oct 24, 2023\n12:22:58',
-    admin: { name: 'Julian V.', avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=100&h=100&q=80' },
-    actionType: 'BANNED USER',
-    actionColor: 'red',
-    target: '@streetwear_blig',
-    ip: '113.189.1.45',
-    details: '—',
-  },
-  {
-    id: 2,
-    timestamp: 'Oct 24, 2023\n12:03:50',
-    admin: { name: 'Sarah L.', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=100&h=100&q=80' },
-    actionType: 'APPROVED LISTING',
-    actionColor: 'green',
-    target: 'Vintage Leather Jacket #902',
-    ip: '113.10.20:41',
-    details: '—',
-  },
-  {
-    id: 3,
-    timestamp: 'Oct 24, 2023\n10:38:44',
-    admin: { name: 'Julian V.', avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=100&h=100&q=80' },
-    actionType: 'DELETED: COMMENT',
-    actionColor: 'orange',
-    target: '@first_maven_83',
-    ip: '183.189.1.45',
-    details: '—',
-  },
-  {
-    id: 4,
-    timestamp: 'Oct 24, 2023\n01:41:11',
-    admin: { initials: 'MT', name: 'Mark T.', color: '#f59e0b' },
-    actionType: 'MATCH CONFIRMED',
-    actionColor: 'blue',
-    target: 'Payout Gateways',
-    ip: '113.0.0.9',
-    details: '—',
-  },
-  {
-    id: 5,
-    timestamp: 'Oct 28, 2023\n02:50:02',
-    admin: { name: 'Sarah L.', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=100&h=100&q=80' },
-    actionType: 'APPROVED',
-    actionColor: 'green',
-    target: 'Silk Midi Burn #901',
-    ip: '13.38.10:41',
-    details: '—',
-  },
-];
 
 const actionColorMap = {
   red:    { bg: '#fee2e2', color: '#991b1b' },
   green:  { bg: '#d1fae5', color: '#065f46' },
   orange: { bg: '#fef3c7', color: '#92400e' },
   blue:   { bg: '#dbeafe', color: '#1e40af' },
+  purple: { bg: '#ede9fe', color: '#5b21b6' },
 };
 
 export default function Analytics() {
+  const { listings, orders, reviews } = useListings();
+  const { profile, user } = useAuth();
+  const [totalUsers, setTotalUsers] = useState(0);
+
+  // Fetch real user count
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const { count } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true });
+        if (count !== null) setTotalUsers(count);
+      } catch (e) {}
+    };
+    fetchUsers();
+  }, []);
+
+  // Build a real activity log from existing listing & review events
+  const now = new Date();
+  const fmtTime = (isoStr) => {
+    if (!isoStr) return now.toLocaleString();
+    try {
+      return new Date(isoStr).toLocaleString('en-PK', {
+        dateStyle: 'medium', timeStyle: 'short'
+      });
+    } catch { return isoStr; }
+  };
+
+  const adminName = profile?.name || user?.email?.split('@')[0] || 'Admin';
+  const adminInitial = adminName.charAt(0).toUpperCase();
+
+  // Generate real activity log rows from listings
+  const activityLogs = [];
+
+  // Approved listings
+  listings
+    .filter(l => l.status === 'Approved' || l.status === 'Active')
+    .slice(0, 3)
+    .forEach(l => activityLogs.push({
+      id: `app-${l.id}`,
+      timestamp: fmtTime(l.createdAt),
+      adminName,
+      adminInitial,
+      actionType: 'APPROVED LISTING',
+      actionColor: 'green',
+      target: l.title || 'Listing',
+      details: `PKR ${parseFloat(l.price).toLocaleString()}`,
+    }));
+
+  // Pending listings
+  listings
+    .filter(l => l.status === 'Pending' || l.status === 'pending')
+    .slice(0, 2)
+    .forEach(l => activityLogs.push({
+      id: `pend-${l.id}`,
+      timestamp: fmtTime(l.createdAt),
+      adminName,
+      adminInitial,
+      actionType: 'PENDING REVIEW',
+      actionColor: 'orange',
+      target: l.title || 'Listing',
+      details: `Awaiting approval`,
+    }));
+
+  // Rejected listings
+  listings
+    .filter(l => l.status === 'Rejected')
+    .slice(0, 2)
+    .forEach(l => activityLogs.push({
+      id: `rej-${l.id}`,
+      timestamp: fmtTime(l.createdAt),
+      adminName,
+      adminInitial,
+      actionType: 'REJECTED LISTING',
+      actionColor: 'red',
+      target: l.title || 'Listing',
+      details: 'Did not meet guidelines',
+    }));
+
+  // Reviews
+  reviews.slice(0, 2).forEach(rv => activityLogs.push({
+    id: `rev-${rv.id}`,
+    timestamp: fmtTime(rv.date),
+    adminName,
+    adminInitial,
+    actionType: 'REVIEW RECEIVED',
+    actionColor: 'purple',
+    target: rv.listingTitle || 'Item',
+    details: `★ ${rv.rating} by ${rv.customerName}`,
+  }));
+
+  // Sort by timestamp descending
+  activityLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+  // Real stat computations
+  const totalLogged = activityLogs.length;
+  const removalCount = listings.filter(l => l.status === 'Rejected').length;
+  const approvalCount = listings.filter(l => l.status === 'Approved' || l.status === 'Active').length;
+  const pendingCount = listings.filter(l => l.status === 'Pending' || l.status === 'pending').length;
+
   return (
     <div className="analytics-root">
       {/* Header */}
       <div className="analytics-header">
         <div>
           <h1 className="page-title">Admin Activity Log</h1>
-          <p className="page-sub">Audit trail and system oversight records.</p>
+          <p className="page-sub">Real-time audit trail of marketplace activity, approvals and review events.</p>
         </div>
         <div className="analytics-actions">
-          <button className="outline-btn-icon"><Filter size={14} /> Filter</button>
           <button className="export-btn-sm"><Download size={14} /> Export CSV</button>
         </div>
       </div>
 
-      {/* Stat cards */}
+      {/* Real Stat cards */}
       <div className="analytics-stats">
         <div className="astat-card orange-border">
           <div className="astat-icon-wrap orange-icon"><AlertOctagon size={18} strokeWidth={2.5} /></div>
           <div>
-            <p className="astat-label">Total Logs Cited</p>
-            <p className="astat-val">1,402</p>
+            <p className="astat-label">Total Activity Events</p>
+            <p className="astat-val">{totalLogged}</p>
           </div>
         </div>
         <div className="astat-card red-border">
           <div className="astat-icon-wrap red-icon"><Trash2 size={18} strokeWidth={2.5} /></div>
           <div>
-            <p className="astat-label">Removal Events</p>
-            <p className="astat-val">12</p>
+            <p className="astat-label">Rejected Listings</p>
+            <p className="astat-val">{removalCount}</p>
           </div>
         </div>
         <div className="astat-card blue-border">
           <div className="astat-icon-wrap blue-icon"><Shield size={18} strokeWidth={2.5} /></div>
           <div>
-            <p className="astat-label">Approvals</p>
-            <p className="astat-val">84</p>
+            <p className="astat-label">Approved Listings</p>
+            <p className="astat-val">{approvalCount}</p>
           </div>
         </div>
         <div className="astat-card gray-border">
           <div className="astat-icon-wrap gray-icon"><User size={18} strokeWidth={2.5} /></div>
           <div>
-            <p className="astat-label">Active Admins</p>
-            <p className="astat-val">3</p>
+            <p className="astat-label">Registered Users</p>
+            <p className="astat-val">{totalUsers}</p>
+          </div>
+        </div>
+        <div className="astat-card" style={{ borderLeft: '3px solid #a78bfa' }}>
+          <div className="astat-icon-wrap" style={{ background: '#ede9fe', color: '#7c3aed' }}>
+            <TrendingUp size={18} strokeWidth={2.5} />
+          </div>
+          <div>
+            <p className="astat-label">Pending Reviews</p>
+            <p className="astat-val">{pendingCount}</p>
+          </div>
+        </div>
+        <div className="astat-card" style={{ borderLeft: '3px solid #6ee7b7' }}>
+          <div className="astat-icon-wrap" style={{ background: '#d1fae5', color: '#059669' }}>
+            <CheckCircle size={18} strokeWidth={2.5} />
+          </div>
+          <div>
+            <p className="astat-label">Total Reviews</p>
+            <p className="astat-val">{reviews.length}</p>
           </div>
         </div>
       </div>
 
-      {/* Log table */}
+      {/* Real log table */}
       <div className="analytics-table-card">
-        <table className="analytics-table">
-          <thead>
-            <tr>
-              <th>TIMESTAMP</th>
-              <th>ADMIN NAME</th>
-              <th>ACTION TYPE</th>
-              <th>TARGET</th>
-              <th>IP ADDRESS</th>
-              <th>DETAILS</th>
-            </tr>
-          </thead>
-          <tbody>
-            {logs.map(log => {
-              const ac = actionColorMap[log.actionColor] || actionColorMap.blue;
-              return (
-                <tr key={log.id}>
-                  <td className="log-timestamp">
-                    {log.timestamp.split('\n').map((line, i) => (
-                      <span key={i} className={i === 0 ? 'ts-date' : 'ts-time'}>{line}</span>
-                    ))}
-                  </td>
-                  <td>
-                    <div className="log-admin">
-                      {log.admin.avatar ? (
-                        <img src={log.admin.avatar} alt={log.admin.name} className="log-admin-avatar-img" />
-                      ) : (
-                        <div className="log-av" style={{ background: log.admin.color }}>
-                          {log.admin.initials}
-                        </div>
-                      )}
-                      <span>{log.admin.name}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <span
-                      className="log-action-badge"
-                      style={{ background: ac.bg, color: ac.color }}
-                    >
-                      {log.actionType}
-                    </span>
-                  </td>
-                  <td className="log-target">{log.target}</td>
-                  <td className="log-ip">{log.ip}</td>
-                  <td>
-                    <button className="log-details-btn"><Edit3 size={13} /></button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-
-        <div className="table-footer">
-          <p>Showing 1–5 of 1902 logs</p>
-          <div className="pagination">
-            <button className="pg-arrow"><ChevronLeft size={14} /></button>
-            <button className="pg-active">1</button>
-            <button>2</button>
-            <button>3</button>
-            <button className="pg-arrow"><ChevronRight size={14} /></button>
+        {activityLogs.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '60px 24px', color: '#94a3b8' }}>
+            <div style={{ fontSize: '48px', marginBottom: '12px' }}>📋</div>
+            <p style={{ fontWeight: '700', fontSize: '16px', color: '#334155', margin: 0 }}>No activity yet</p>
+            <p style={{ margin: '6px 0 0', fontSize: '13px' }}>
+              Marketplace actions (approvals, rejections, reviews) will appear here automatically.
+            </p>
           </div>
-        </div>
+        ) : (
+          <>
+            <table className="analytics-table">
+              <thead>
+                <tr>
+                  <th>TIMESTAMP</th>
+                  <th>ADMIN</th>
+                  <th>ACTION TYPE</th>
+                  <th>TARGET</th>
+                  <th>DETAILS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {activityLogs.map(log => {
+                  const ac = actionColorMap[log.actionColor] || actionColorMap.blue;
+                  return (
+                    <tr key={log.id}>
+                      <td className="log-timestamp">
+                        <span className="ts-date">{log.timestamp.split(',')[0]}</span>
+                        <span className="ts-time">{log.timestamp.split(',')[1] || ''}</span>
+                      </td>
+                      <td>
+                        <div className="log-admin">
+                          <div className="log-av" style={{ background: '#c19358', color: '#fff', width: 30, height: 30, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13 }}>
+                            {log.adminInitial}
+                          </div>
+                          <span>{log.adminName}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span
+                          className="log-action-badge"
+                          style={{ background: ac.bg, color: ac.color }}
+                        >
+                          {log.actionType}
+                        </span>
+                      </td>
+                      <td className="log-target">{log.target}</td>
+                      <td className="log-ip" style={{ fontStyle: 'italic', color: '#64748b' }}>{log.details}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            <div className="table-footer">
+              <p>Showing {activityLogs.length} real-time event(s)</p>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

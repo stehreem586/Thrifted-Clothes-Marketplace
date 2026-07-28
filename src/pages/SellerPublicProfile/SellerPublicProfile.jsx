@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../utils/supabaseClient';
 import ProductCard from '../../components/ProductCard/ProductCard';
+import ReportModal from '../../components/common/ReportModal';
+import { ShieldAlert } from 'lucide-react';
 import './SellerPublicProfile.css';
 
 // Fallback mock database for preview if UUID is not found in database
@@ -77,18 +79,17 @@ function SellerPublicProfile() {
   const [activeListings, setActiveListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   useEffect(() => {
     const loadProfileData = async () => {
       setLoading(true);
-      
-      // Determine if sellerId is a UUID
+
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       const isRealUser = uuidRegex.test(sellerId);
 
       if (isRealUser) {
         try {
-          // 1. Fetch profile
           const { data: prof, error: profError } = await supabase
             .from('profiles')
             .select('*')
@@ -96,12 +97,10 @@ function SellerPublicProfile() {
             .single();
 
           if (profError || !prof) {
-            console.warn('Profile not found in database, checking mock.');
             loadMockData();
             return;
           }
 
-          // 2. Fetch rating and review counts
           const { data: reviews, error: reviewsError } = await supabase
             .from('reviews')
             .select('rating')
@@ -117,14 +116,12 @@ function SellerPublicProfile() {
             }
           }
 
-          // 3. Fetch sales count (listings with status = sold)
           const { count: salesCount, error: salesError } = await supabase
             .from('listings')
             .select('*', { count: 'exact', head: true })
             .eq('seller_id', sellerId)
             .eq('status', 'sold');
 
-          // 4. Fetch active listings only
           const { data: listings, error: listingsError } = await supabase
             .from('listings')
             .select('*')
@@ -149,7 +146,6 @@ function SellerPublicProfile() {
     };
 
     const loadMockData = () => {
-      // Find matching mock or fallback to 'vintage-vibes'
       const key = MOCK_SELLERS[sellerId] ? sellerId : 'vintage-vibes';
       const mock = MOCK_SELLERS[key];
 
@@ -180,7 +176,6 @@ function SellerPublicProfile() {
       setShowLoginModal(true);
       return;
     }
-    // Navigate to chat and pass seller info so we can open a new thread
     navigate(`/chat?sellerId=${profileData.id}&name=${encodeURIComponent(profileData.name)}&avatar=${encodeURIComponent(profileData.avatar_url || '')}`);
   };
 
@@ -196,6 +191,14 @@ function SellerPublicProfile() {
 
   return (
     <div className="public-profile-container">
+      {/* Report Modal */}
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        targetType="Seller / Storefront"
+        targetUser={profileData}
+      />
+
       {/* Login Alert Modal for Guest Users */}
       {showLoginModal && (
         <div className="login-modal-backdrop" onClick={() => setShowLoginModal(false)}>
@@ -241,6 +244,14 @@ function SellerPublicProfile() {
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               </svg>
               Chat with Seller
+            </button>
+            <button
+              className="chat-seller-btn"
+              style={{ backgroundColor: '#fef2f2', color: '#dc2626', borderColor: '#fee2e2', marginLeft: '8px' }}
+              onClick={() => setShowReportModal(true)}
+            >
+              <ShieldAlert size={16} style={{ marginRight: '4px' }} />
+              Report Seller
             </button>
           </div>
         </div>

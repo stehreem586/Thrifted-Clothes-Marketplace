@@ -20,6 +20,7 @@ import ProfileSetup from './pages/ProfileSetup/ProfileSetup';
 import SellerPublicProfile from './pages/SellerPublicProfile/SellerPublicProfile';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import { useAuth } from './context/AuthContext';
+import { ModerationProvider } from './context/ModerationContext';
 
 // Admin layout + pages
 import AdminLayout from './pages/Admin/AdminLayout';
@@ -129,50 +130,52 @@ function ModeRedirectAndToast() {
 /* ─── App ─────────────────────────────────────────────────── */
 function App() {
   return (
-    <Router>
-      <ModeRedirectAndToast />
-      <Routes>
-        {/* Public / customer routes — wrapped in MainLayout (navbar + footer) */}
-        <Route element={<MainLayout />}>
-          <Route path="/" element={<HomeRouter />} />
-          <Route path="/shop" element={<Shop />} />
-          <Route path="/search" element={<SearchResults />} />
-          <Route path="/chat" element={<Chat />} />
-          <Route path="/saved" element={<SavedItems />} />
-          <Route path="/order-history" element={<OrderHistory />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/product/:id" element={<Product />} />
-          <Route path="/storefront" element={<Storefront />} />
-          <Route path="/seller-profile/:sellerId" element={<SellerPublicProfile />} />
-        </Route>
+    <ModerationProvider>
+      <Router>
+        <ModeRedirectAndToast />
+        <Routes>
+          {/* Public / customer routes — wrapped in MainLayout (navbar + footer) */}
+          <Route element={<MainLayout />}>
+            <Route path="/" element={<HomeRouter />} />
+            <Route path="/shop" element={<Shop />} />
+            <Route path="/search" element={<SearchResults />} />
+            <Route path="/chat" element={<Chat />} />
+            <Route path="/saved" element={<SavedItems />} />
+            <Route path="/order-history" element={<OrderHistory />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/product/:id" element={<Product />} />
+            <Route path="/storefront" element={<Storefront />} />
+            <Route path="/seller-profile/:sellerId" element={<SellerPublicProfile />} />
+          </Route>
 
-        <Route path="/login" element={<Login />} />
-        <Route path="/seller" element={<Seller />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/seller" element={<Seller />} />
 
-        {/* One-time profile setup — shown after first signup, skipped if complete */}
-        <Route path="/profile-setup" element={<ProfileSetupGuard />} />
+          {/* One-time profile setup — shown after first signup, skipped if complete */}
+          <Route path="/profile-setup" element={<ProfileSetupGuard />} />
 
-        {/* Admin portal — protected, nested under AdminLayout */}
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <AdminLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<AdminDashboard />} />
-          <Route path="sellers" element={<Sellers />} />
-          <Route path="inventory" element={<Inventory />} />
-          <Route path="analytics" element={<Analytics />} />
-          <Route path="sales" element={<Sales />} />
-          <Route path="messages" element={<Messages />} />
-          <Route path="community" element={<Community />} />
-          <Route path="disputes" element={<Disputes />} />
-          <Route path="settings" element={<AdminSettings />} />
-        </Route>
-      </Routes>
-    </Router>
+          {/* Admin portal — protected, nested under AdminLayout */}
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<AdminDashboard />} />
+            <Route path="sellers" element={<Sellers />} />
+            <Route path="inventory" element={<Inventory />} />
+            <Route path="analytics" element={<Analytics />} />
+            <Route path="sales" element={<Sales />} />
+            <Route path="messages" element={<Messages />} />
+            <Route path="community" element={<Community />} />
+            <Route path="disputes" element={<Disputes />} />
+            <Route path="settings" element={<AdminSettings />} />
+          </Route>
+        </Routes>
+      </Router>
+    </ModerationProvider>
   );
 }
 
