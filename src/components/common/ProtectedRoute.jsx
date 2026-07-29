@@ -39,7 +39,9 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (allowedRoles && (!profile || !allowedRoles.includes(profile.role))) {
+  const userRole = profile?.role || user?.user_metadata?.role || localStorage.getItem('userRole') || 'customer';
+
+  if (allowedRoles && !allowedRoles.includes(userRole)) {
     // User is logged in but doesn't have the required role
     return <Navigate to="/" replace />;
   }

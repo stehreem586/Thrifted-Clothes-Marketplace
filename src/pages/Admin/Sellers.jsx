@@ -5,7 +5,7 @@ import { supabase } from '../../utils/supabaseClient';
 import './Sellers.css';
 
 export default function Sellers() {
-  const { listings, approveListing, rejectListing } = useListings();
+  const { listings, reviews, approveListing, rejectListing } = useListings();
   const [activeTab, setActiveTab] = useState('All Sellers');
   const [search, setSearch] = useState('');
   
@@ -13,46 +13,69 @@ export default function Sellers() {
   const [viewSeller, setViewSeller] = useState(null);
   const [editSeller, setEditSeller] = useState(null);
   const [editStatus, setEditStatus] = useState('Verified');
+  const [editStatusValue, setEditStatusValue] = useState('Verified');
 
-  // Dynamic Sellers State (persisted in localStorage or derived)
+  // Dynamic Real Sellers State (loaded from Supabase profiles or published listings)
   const [sellerList, setSellerList] = useState(() => {
     try {
       const saved = localStorage.getItem('secondlife_admin_sellers');
       if (saved) return JSON.parse(saved);
     } catch (e) {}
-    return [
-      {
-        id: 's-1',
-        name: 'Julian Vintages',
-        email: 'julian@vintagemarket.com',
-        city: 'Lahore, Pakistan',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80',
-        status: 'Verified',
-        rating: 4.9,
-        bio: 'Curated 90s vintage leather jackets and retro denim.'
-      },
-      {
-        id: 's-2',
-        name: 'SecondLife Verified Merchant Store',
-        email: 'seller@secondlife.com',
-        city: 'Karachi, Pakistan',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=80',
-        status: 'Pending',
-        rating: 4.8,
-        bio: 'Official SecondLife thrift seller store.'
-      },
-      {
-        id: 's-3',
-        name: 'Eco Threads Studio',
-        email: 'contact@ecothreads.pk',
-        city: 'Islamabad, Pakistan',
-        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&q=80',
-        status: 'Verified',
-        rating: 4.7,
-        bio: 'Hand-repaired upcycled streetwear and organic cotton basics.'
-      }
-    ];
+    return [];
   });
+
+  // Hydrate real sellers from Supabase & active listings
+  useEffect(() => {
+    const fetchRealSellers = async () => {
+      try {
+        const { data: dbProfiles, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .or('role.eq.seller,role.eq.merchant');
+
+        const map = new Map();
+
+        // Add sellers from DB
+        if (!error && dbProfiles && dbProfiles.length > 0) {
+          dbProfiles.forEach(p => {
+            map.set(p.id, {
+              id: p.id,
+              name: p.name || p.email?.split('@')[0] || 'Seller Store',
+              email: p.email || 'seller@secondlife.com',
+              city: p.city ? `${p.city}, Pakistan` : 'Pakistan',
+              avatar: p.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80',
+              status: 'Verified',
+              bio: p.bio || 'No store bio description provided.'
+            });
+          });
+        }
+
+        // Add any users who have published listings
+        listings.forEach(l => {
+          const sId = l.seller_id || `seller-${l.id}`;
+          if (!map.has(sId)) {
+            map.set(sId, {
+              id: sId,
+              name: l.seller?.name || 'Verified Seller',
+              email: 'seller@secondlife.com',
+              city: l.seller?.location || 'Pakistan',
+              avatar: l.seller?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80',
+              status: 'Verified',
+              bio: 'No store bio description provided.'
+            });
+          }
+        });
+
+        if (map.size > 0) {
+          setSellerList(Array.from(map.values()));
+        }
+      } catch (err) {
+        console.warn('Real sellers fetch notice:', err.message);
+      }
+    };
+
+    fetchRealSellers();
+  }, [listings]);
 
   useEffect(() => {
     try {
@@ -70,11 +93,19 @@ export default function Sellers() {
     const soldItems = sellerListings.filter(l => l.status === 'Sold');
     const totalSalesNum = soldItems.reduce((sum, l) => sum + (parseFloat(l.price) || 0), 0);
 
+    // Calculate rating dynamically based on listings reviews
+    const sellerListingIds = sellerListings.map(l => String(l.id));
+    const sellerReviews = reviews ? reviews.filter(r => sellerListingIds.includes(String(r.listingId))) : [];
+    const avgRating = sellerReviews.length > 0
+      ? (sellerReviews.reduce((sum, r) => sum + (r.rating || 5), 0) / sellerReviews.length).toFixed(1)
+      : 'NA';
+
     return {
       ...seller,
-      listingsCount: sellerListings.length > 0 ? sellerListings.length : 4,
+      listingsCount: sellerListings.length,
       totalSales: totalSalesNum > 0 ? `PKR ${totalSalesNum.toLocaleString()}` : 'PKR 0',
-      items: sellerListings
+      items: sellerListings,
+      rating: avgRating
     };
   });
 
@@ -113,6 +144,11 @@ export default function Sellers() {
   const pendingSellersCount = sellerList.filter(s => s.status === 'Pending').length;
   const verifiedSellersCount = sellerList.filter(s => s.status === 'Verified').length;
 
+  const ratedSellers = sellersWithListings.filter(s => s.rating !== 'NA');
+  const overallAvgRating = ratedSellers.length > 0
+    ? (ratedSellers.reduce((sum, s) => sum + parseFloat(s.rating), 0) / ratedSellers.length).toFixed(1)
+    : 'NA';
+
   return (
     <div className="sellers-root">
       {/* Header */}
@@ -142,8 +178,10 @@ export default function Sellers() {
         </div>
         <div className="sstat-card">
           <p className="sstat-label">AVG. SELLER RATING</p>
-          <p className="sstat-big">4.8</p>
-          <div className="stars">{'★★★★★'}</div>
+          <p className="sstat-big">{overallAvgRating}</p>
+          <div className="stars" style={{ color: '#f59e0b', fontSize: '13px', fontWeight: 'bold' }}>
+            {overallAvgRating === 'NA' ? 'No Ratings Yet' : '★'.repeat(Math.round(parseFloat(overallAvgRating)))}
+          </div>
         </div>
       </div>
 
@@ -209,7 +247,9 @@ export default function Sellers() {
                   <td>{s.listingsCount} item(s)</td>
                   <td className="bold-cell">{s.totalSales}</td>
                   <td>
-                    <span className="rating-val">★ {s.rating}</span>
+                    <span className="rating-val">
+                      {s.rating === 'NA' ? 'NA' : `★ ${s.rating}`}
+                    </span>
                   </td>
                   <td style={{ textAlign: 'right' }}>
                     <div className="row-actions" style={{ justifyContent: 'flex-end' }}>
@@ -267,14 +307,16 @@ export default function Sellers() {
                   <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>{viewSeller.email} • 📍 {viewSeller.city}</p>
                   <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
                     <span className={`status-pill ${viewSeller.status.toLowerCase()}`}>{viewSeller.status}</span>
-                    <span style={{ fontSize: '12px', fontWeight: '700', color: '#f59e0b' }}>★ {viewSeller.rating} Rating</span>
+                    <span style={{ fontSize: '12px', fontWeight: '700', color: '#f59e0b' }}>
+                      {viewSeller.rating === 'NA' ? 'No Ratings Yet' : `★ ${viewSeller.rating} Rating`}
+                    </span>
                   </div>
                 </div>
               </div>
 
               <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '10px', marginBottom: '20px' }}>
                 <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Store Description / Bio</span>
-                <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#334155' }}>{viewSeller.bio || 'Curated thrift seller store on SecondLife.'}</p>
+                <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#334155' }}>{viewSeller.bio || 'No store bio description provided.'}</p>
               </div>
 
               {/* Seller's Submitted Items Preview */}

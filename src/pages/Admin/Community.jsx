@@ -56,7 +56,10 @@ const FILTERS = ['All', 'Buyers', 'Sellers', 'Trusted'];
 
 export default function Community() {
   const { takeModerationAction } = useModeration();
-  const { showToast } = useAuth();
+  const { user, profile: adminProfile, showToast } = useAuth();
+  // Check localStorage as fallback in case adminProfile hasn't hydrated yet
+  const adminRole = adminProfile?.role || localStorage.getItem('userRole') || '';
+  const isAdmin = adminRole === 'admin' || adminRole === 'super_admin';
 
   const [allUsers, setAllUsers]   = useState([]);
   const [teamList, setTeamList]   = useState([]);
@@ -73,6 +76,7 @@ export default function Community() {
   const [warningReason, setWarningReason]   = useState('');
   const [actionConfirmConfig, setActionConfirmConfig] = useState({ isOpen: false });
   const [openMenuUserId, setOpenMenuUserId] = useState(null);
+  const [changingRoleMemberId, setChangingRoleMemberId] = useState(null);
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [newInvite, setNewInvite] = useState({ name: '', email: '', role: 'Moderator' });
 
@@ -85,8 +89,31 @@ export default function Community() {
         .order('created_at', { ascending: false });
 
       const adminRoles = ['admin', 'super_admin', 'moderator', 'supporter'];
-      setAllUsers((profiles || []).filter(p => !adminRoles.includes(p.role)));
-      setTeamList((profiles || []).filter(p =>  adminRoles.includes(p.role)));
+      let allProfiles = profiles || [];
+
+      // Auto-promote: find users with listings who aren't already sellers/admins
+      try {
+        const { data: listingRows } = await supabase
+          .from('listings')
+          .select('seller_id');
+        if (listingRows && listingRows.length > 0) {
+          const sellerIds = [...new Set(listingRows.map(l => l.seller_id).filter(Boolean))];
+          const nonSellerIds = sellerIds.filter(id => {
+            const prof = allProfiles.find(p => p.id === id);
+            return prof && !adminRoles.includes(prof.role) && prof.role !== 'seller';
+          });
+          if (nonSellerIds.length > 0) {
+            await supabase.from('profiles').update({ role: 'seller' }).in('id', nonSellerIds);
+            // Update local state to reflect the new role
+            allProfiles = allProfiles.map(p =>
+              nonSellerIds.includes(p.id) ? { ...p, role: 'seller' } : p
+            );
+          }
+        }
+      } catch (_) {}
+
+      setAllUsers(allProfiles.filter(p => !adminRoles.includes(p.role)));
+      setTeamList(allProfiles.filter(p =>  adminRoles.includes(p.role)));
     } catch (err) {
       console.warn('Community profile fetch:', err.message);
     }
@@ -104,10 +131,10 @@ export default function Community() {
   // Reset visible count when filter/search changes
   useEffect(() => { setVisibleCount(PAGE_SIZE); }, [activeFilter, search]);
 
-  // Metrics
+  // Metrics — 'customer' is the DB role name for buyers
   const totalUsersCount     = allUsers.length;
   const sellersCount        = allUsers.filter(u => u.role === 'seller').length;
-  const buyersCount         = allUsers.filter(u => u.role === 'buyer').length;
+  const buyersCount         = allUsers.filter(u => u.role === 'customer' || u.role === 'buyer' || !u.role).length;
   const trustedSellersCount = allUsers.filter(isTrustedSeller).length;
 
   // Filtered users
@@ -118,7 +145,7 @@ export default function Community() {
                   (u.username || '').toLowerCase().includes(q) ||
                   (u.city || '').toLowerCase().includes(q);
     if (!match) return false;
-    if (activeFilter === 'Buyers')  return u.role === 'buyer';
+    if (activeFilter === 'Buyers')  return u.role === 'customer' || u.role === 'buyer' || !u.role;
     if (activeFilter === 'Sellers') return u.role === 'seller';
     if (activeFilter === 'Trusted') return isTrustedSeller(u);
     return true;
@@ -153,10 +180,19 @@ export default function Community() {
   };
 
   const handleChangeTeamRole = async (memberId, newRoleType) => {
-    await supabase.from('profiles').update({ role: newRoleType }).eq('id', memberId);
-    setTeamList(prev => prev.map(m => m.id === memberId ? { ...m, role: newRoleType } : m));
-    setOpenMenuUserId(null);
-    if (showToast) showToast(`Role updated to ${teamRoleLabel(newRoleType)}`);
+    try {
+      const { error } = await supabase.from('profiles').update({ role: newRoleType }).eq('id', memberId);
+      if (error) throw error;
+      
+      await fetchData();
+      setOpenMenuUserId(null);
+      setChangingRoleMemberId(null);
+      if (showToast) {
+        showToast(`Role updated to ${newRoleType === 'customer' ? 'Customer' : teamRoleLabel(newRoleType)}`);
+      }
+    } catch (err) {
+      if (showToast) showToast(`Failed to update role: ${err.message}`);
+    }
   };
 
   const handleInviteSubmit = (e) => {
@@ -194,23 +230,36 @@ export default function Community() {
             </div>
             <div className="report-modal-form" style={{ padding: '20px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <div><span style={{ fontSize: '0.75rem', color: '#64748b' }}>Role</span><p style={{ fontWeight: '700', margin: '2px 0 0', textTransform: 'capitalize' }}>{inspectedUser.role || 'buyer'}</p></div>
+                <div><span style={{ fontSize: '0.75rem', color: '#64748b' }}>Role</span><p style={{ fontWeight: '700', margin: '2px 0 0', textTransform: 'capitalize' }}>{inspectedUser.role === 'customer' ? 'Buyer' : (inspectedUser.role || 'Buyer')}</p></div>
                 <div><span style={{ fontSize: '0.75rem', color: '#64748b' }}>City</span><p style={{ fontWeight: '700', margin: '2px 0 0' }}>📍 {inspectedUser.city || 'Not set'}</p></div>
                 <div><span style={{ fontSize: '0.75rem', color: '#64748b' }}>Joined</span><p style={{ fontWeight: '700', margin: '2px 0 0' }}>{inspectedUser.created_at ? new Date(inspectedUser.created_at).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</p></div>
                 <div><span style={{ fontSize: '0.75rem', color: '#64748b' }}>Status</span><p style={{ fontWeight: '700', margin: '2px 0 0', color: inspectedUser.status === 'banned' ? '#dc2626' : '#059669', textTransform: 'capitalize' }}>{inspectedUser.status || 'Active'}</p></div>
               </div>
-              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '12px 14px', borderRadius: '8px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#166534' }}>SELLER METRICS</span>
-                  {isTrustedSeller(inspectedUser) && <span style={{ fontSize: '0.75rem', fontWeight: '700', background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}><Award size={12} /> Trusted Seller</span>}
-                </div>
-                <div style={{ display: 'flex', gap: '20px', marginTop: '8px' }}>
-                  <div><span style={{ fontSize: '0.75rem', color: '#166534' }}>Orders</span><p style={{ fontSize: '1.1rem', fontWeight: '700', color: '#14532d', margin: 0 }}>{inspectedUser.completed_orders || 0}</p></div>
-                  <div><span style={{ fontSize: '0.75rem', color: '#166534' }}>Rating</span><p style={{ fontSize: '1.1rem', fontWeight: '700', color: '#14532d', margin: 0 }}>★ {inspectedUser.avg_rating ? Number(inspectedUser.avg_rating).toFixed(1) : 'N/A'}</p></div>
-                  <div><span style={{ fontSize: '0.75rem', color: '#166534' }}>Listings</span><p style={{ fontSize: '1.1rem', fontWeight: '700', color: '#14532d', margin: 0 }}>{inspectedUser.listings_count || 0}</p></div>
-                </div>
+
+              {/* Bio — shown for ALL users, with fallback */}
+              <div style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', padding: '12px 14px', borderRadius: '8px', marginTop: '10px' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Bio</span>
+                <p style={{ fontSize: '0.85rem', color: inspectedUser.bio ? '#334155' : '#94a3b8', margin: '4px 0 0', lineHeight: '1.5', fontStyle: inspectedUser.bio ? 'normal' : 'italic' }}>
+                  {inspectedUser.bio || 'No bio provided yet.'}
+                </p>
               </div>
-              <div style={{ fontSize: '0.82rem', color: '#991b1b', background: '#fee2e2', padding: '10px 12px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between' }}>
+
+              {/* Seller Metrics — only shown for sellers */}
+              {inspectedUser.role === 'seller' && (
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '12px 14px', borderRadius: '8px', marginTop: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.8rem', fontWeight: '700', color: '#166534' }}>SELLER METRICS</span>
+                    {isTrustedSeller(inspectedUser) && <span style={{ fontSize: '0.75rem', fontWeight: '700', background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}><Award size={12} /> Trusted Seller</span>}
+                  </div>
+                  <div style={{ display: 'flex', gap: '20px', marginTop: '8px' }}>
+                    <div><span style={{ fontSize: '0.75rem', color: '#166534' }}>Orders</span><p style={{ fontSize: '1.1rem', fontWeight: '700', color: '#14532d', margin: 0 }}>{inspectedUser.completed_orders || 0}</p></div>
+                    <div><span style={{ fontSize: '0.75rem', color: '#166534' }}>Rating</span><p style={{ fontSize: '1.1rem', fontWeight: '700', color: '#14532d', margin: 0 }}>★ {inspectedUser.avg_rating ? Number(inspectedUser.avg_rating).toFixed(1) : 'N/A'}</p></div>
+                    <div><span style={{ fontSize: '0.75rem', color: '#166534' }}>Listings</span><p style={{ fontSize: '1.1rem', fontWeight: '700', color: '#14532d', margin: 0 }}>{inspectedUser.listings_count || 0}</p></div>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ fontSize: '0.82rem', color: '#991b1b', background: '#fee2e2', padding: '10px 12px', borderRadius: '8px', marginTop: '10px', display: 'flex', justifyContent: 'space-between' }}>
                 <span>Warnings on Record:</span><strong>{inspectedUser.warnings_count || 0}</strong>
               </div>
               <div className="report-modal-actions" style={{ marginTop: '14px' }}>
@@ -383,7 +432,7 @@ export default function Community() {
                               </div>
                             </div>
                           </td>
-                          <td><span className={`role-pill ${u.role || 'buyer'}`} style={{ textTransform: 'capitalize' }}>{u.role || 'buyer'}</span></td>
+                          <td><span className={`role-pill ${u.role === 'customer' ? 'buyer' : (u.role || 'buyer')}`} style={{ textTransform: 'capitalize' }}>{u.role === 'customer' ? 'Buyer' : (u.role || 'Buyer')}</span></td>
                           <td className="date-cell">{u.created_at ? new Date(u.created_at).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</td>
                           <td className="num-cell">
                             {u.role === 'seller'
@@ -494,17 +543,41 @@ export default function Community() {
                       <td><span className={`team-role-badge ${teamRoleType(m.role)}`}>{teamRoleLabel(m.role)}</span></td>
                       <td className="team-last-active">{m.created_at ? new Date(m.created_at).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</td>
                       <td>
-                        <div style={{ position: 'relative' }}>
-                          <button className="team-action-btn" onClick={() => setOpenMenuUserId(openMenuUserId === m.id ? null : m.id)}>
-                            <MoreVertical size={15} />
-                          </button>
-                          {openMenuUserId === m.id && (
-                            <div className="role-menu-dropdown">
-                              <p className="menu-header">Change Role:</p>
-                              <button onClick={() => handleChangeTeamRole(m.id, 'super_admin')}>Make Super Admin</button>
-                              <button onClick={() => handleChangeTeamRole(m.id, 'moderator')}>Make Moderator</button>
-                              <button onClick={() => handleChangeTeamRole(m.id, 'supporter')}>Make Supporter</button>
-                            </div>
+                        <div style={{ position: 'relative', zIndex: openMenuUserId === m.id ? 9999 : 1 }}>
+                          {isAdmin ? (
+                            <>
+                              <button className="team-action-btn" onClick={() => { setOpenMenuUserId(openMenuUserId === m.id ? null : m.id); setChangingRoleMemberId(null); }}>
+                                <MoreVertical size={15} />
+                              </button>
+                              {openMenuUserId === m.id && (
+                                <div className="role-menu-dropdown">
+                                  {changingRoleMemberId !== m.id ? (
+                                    <>
+                                      <p className="menu-header">Actions:</p>
+                                      <button onClick={() => setChangingRoleMemberId(m.id)}>
+                                        Change Role...
+                                      </button>
+                                      <button onClick={() => handleChangeTeamRole(m.id, 'customer')} style={{ color: '#ef4444' }}>
+                                        Remove Admin
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <p className="menu-header">Select Role:</p>
+                                      <button onClick={() => handleChangeTeamRole(m.id, 'super_admin')}>Make Super Admin</button>
+                                      <button onClick={() => handleChangeTeamRole(m.id, 'admin')}>Make Admin</button>
+                                      <button onClick={() => handleChangeTeamRole(m.id, 'moderator')}>Make Moderator</button>
+                                      <button onClick={() => handleChangeTeamRole(m.id, 'supporter')}>Make Supporter</button>
+                                      <button onClick={() => setChangingRoleMemberId(null)} style={{ borderTop: '1px solid #f1f5f9', color: '#64748b', marginTop: '4px' }}>
+                                        ← Back
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <span style={{ fontSize: '12px', color: '#94a3b8' }}>—</span>
                           )}
                         </div>
                       </td>
