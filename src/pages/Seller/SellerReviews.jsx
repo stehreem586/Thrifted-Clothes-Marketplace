@@ -29,7 +29,7 @@ export default function SellerReviews() {
   const totalReviewsCount = reviews.length;
   const avgRating = totalReviewsCount > 0
     ? (reviews.reduce((sum, r) => sum + r.rating, 0) / totalReviewsCount).toFixed(1)
-    : '5.0';
+    : 'NA';
   const pendingRepliesCount = reviews.filter(r => !r.reply).length;
 
   const handleOpenReplyModal = (review) => {
@@ -63,7 +63,9 @@ export default function SellerReviews() {
           <div className="rev-card-icon gold-bg">⭐</div>
           <div>
             <span className="rev-card-label">Store Average Rating</span>
-            <h2 className="rev-card-val">{avgRating} <span className="max-rating">/ 5.0</span></h2>
+            <h2 className="rev-card-val">
+              {avgRating} {avgRating !== 'NA' && <span className="max-rating">/ 5.0</span>}
+            </h2>
           </div>
         </div>
 
@@ -94,15 +96,12 @@ export default function SellerReviews() {
             onChange={(e) => setSelectedListingId(e.target.value)}
             className="clean-select reviews-select"
           >
-            <option value="ALL">All Listings ({reviews.length} reviews)</option>
-            {listings.map(item => {
-              const count = reviews.filter(r => String(r.listingId) === String(item.id) || r.listingTitle === item.title).length;
-              return (
-                <option key={item.id} value={item.id}>
-                  {item.title} ({count} reviews)
-                </option>
-              );
-            })}
+            <option value="ALL">All Listings</option>
+            {listings.map(item => (
+              <option key={item.id} value={item.id}>
+                {item.title}
+              </option>
+            ))}
           </select>
         </div>
 

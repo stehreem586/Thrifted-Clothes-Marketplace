@@ -59,8 +59,14 @@ export default function Disputes() {
 
   // Dynamic statistics
   const pendingCount = reports.filter(r => r.status === 'Pending' || r.status === 'Under Review').length;
-  const resolved30dCount = reports.filter(r => r.status === 'Resolved').length + 124;
+  const resolved30dCount = reports.filter(r => r.status === 'Resolved' || r.status === 'Dismissed').length;
   const highRiskCount = reports.filter(r => r.priority === 'High' && r.status !== 'Resolved' && r.status !== 'Dismissed').length;
+
+  const todayCount = reports.filter(r => {
+    const rawDate = r.createdAt || r.date;
+    if (!rawDate) return false;
+    return new Date(rawDate).toDateString() === new Date().toDateString();
+  }).length;
 
   // Moderation Action Handler with Confirmation for Destructive Actions
   const handleActionClick = (actionType, title, message, confirmVariant = 'danger') => {
@@ -147,15 +153,15 @@ export default function Disputes() {
           <div>
             <p className="dstat-label">Pending Review</p>
             <p className="dstat-val">{pendingCount}</p>
-            <p className="dstat-hint green-txt">+5 today</p>
+            <p className="dstat-hint green-txt">+{todayCount} created today</p>
           </div>
         </div>
         <div className="dstat">
           <div className="dstat-icon-wrap gray"><Clock size={18} /></div>
           <div>
             <p className="dstat-label">Avg. Response Time</p>
-            <p className="dstat-val">2.4h</p>
-            <p className="dstat-hint">0% vs last week</p>
+            <p className="dstat-val">N/A</p>
+            <p className="dstat-hint">System Active</p>
           </div>
         </div>
         <div className="dstat">
@@ -163,7 +169,7 @@ export default function Disputes() {
           <div>
             <p className="dstat-label">Resolved (30d)</p>
             <p className="dstat-val">{resolved30dCount}</p>
-            <p className="dstat-hint green-txt">99% success</p>
+            <p className="dstat-hint green-txt">All-time resolution</p>
           </div>
         </div>
         <div className="dstat">

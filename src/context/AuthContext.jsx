@@ -91,11 +91,14 @@ export const AuthProvider = ({ children }) => {
         if (localProfStr) {
           try {
             const localProf = JSON.parse(localProfStr);
-            prof = { ...(prof || {}), ...localProf };
+            // NEVER let localStorage override the role from DB — DB is source of truth
+            const { role: _ignored, ...localProfWithoutRole } = localProf;
+            prof = { ...(prof || {}), ...localProfWithoutRole };
           } catch(e) {}
         }
         setProfile(prof);
-        if (prof) localStorage.setItem('userRole', prof.role);
+        // Always persist the real DB role to localStorage
+        if (prof?.role) localStorage.setItem('userRole', prof.role);
 
         // Stay-signed-in logic
         const staySignedIn = localStorage.getItem('staySignedIn');

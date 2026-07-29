@@ -3,9 +3,10 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Store, Package, BarChart2, Star,
   MessageSquare, Users, Scale, Settings as SettingsIcon, LogOut,
-  Bell, Globe, Search
+  Bell, Globe, Search, Sun, Moon
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { useListings } from '../../context/ListingsContext';
 import './AdminLayout.css';
 
@@ -24,19 +25,23 @@ const navItems = [
 export default function AdminLayout() {
   const navigate = useNavigate();
   const { user, profile, logout, switchMode } = useAuth();
+  const { isDarkMode, toggleTheme } = useTheme();
   const { notifications, markNotificationRead, markAllNotificationsRead } = useListings();
   const [showNotifModal, setShowNotifModal] = useState(false);
   const [searchVal, setSearchVal] = useState('');
 
   const unreadCount = notifications ? notifications.filter(n => !n.read).length : 0;
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      navigate('/login');
-    } catch (err) {
-      console.error('Logout failed:', err);
-    }
+  const handleLogout = () => {
+    // Clear all auth state immediately, then redirect before React re-renders
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('userMode');
+    localStorage.removeItem('staySignedIn');
+    sessionStorage.removeItem('sessionAlive');
+    // Fire-and-forget the Supabase signOut in background
+    logout().catch(() => {});
+    // Go directly to guest/home page, bypassing ProtectedRoute
+    window.location.replace('/');
   };
 
   const handleGoToMarketplace = () => {
@@ -131,7 +136,7 @@ export default function AdminLayout() {
 
       {/* ── MAIN CONTENT ── */}
       <div className="admin-main">
-        {/* Topbar: Search Bar + Notifications & Avatar */}
+        {/* Topbar: Search Bar + Marketplace + Notifications & Avatar */}
         <header className="admin-topbar">
           <div className="topbar-search">
             <Search size={15} className="search-icon-top" />
@@ -142,7 +147,39 @@ export default function AdminLayout() {
               onChange={e => setSearchVal(e.target.value)}
             />
           </div>
-          <div className="topbar-actions" style={{ gap: '16px', alignItems: 'center' }}>
+          <div className="topbar-actions" style={{ gap: '14px', alignItems: 'center', display: 'flex' }}>
+            {/* Dark/Light Mode Theme Toggle Button */}
+            <button
+              className="topbar-icon-btn"
+              title="Toggle Dark/Light Mode"
+              onClick={toggleTheme}
+              style={{ cursor: 'pointer' }}
+              aria-label="Toggle theme"
+            >
+              {isDarkMode ? <Sun size={19} strokeWidth={1.8} /> : <Moon size={19} strokeWidth={1.8} />}
+            </button>
+
+            {/* Quick Marketplace link near notifications */}
+            <button
+              type="button"
+              onClick={handleGoToMarketplace}
+              style={{
+                background: '#f1f5f9',
+                border: '1px solid #cbd5e1',
+                padding: '6px 14px',
+                borderRadius: '20px',
+                fontSize: '12px',
+                fontWeight: '600',
+                color: '#334155',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px'
+              }}
+            >
+              <Globe size={13} /> Marketplace
+            </button>
+
             {/* Universal Notifications Bell */}
             <button
               className="topbar-icon-btn"

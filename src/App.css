@@ -752,3 +752,807 @@ html.dark .action-icon-btn:hover {
   background-color: #27272a !important;
 }
 
+/* ==========================================================================
+   ADMIN PORTAL DARK MODE OVERRIDES
+   ========================================================================== */
+html.dark .admin-shell {
+  background-color: #0d0d0f !important;
+  color: #f4f4f5 !important;
+}
+
+html.dark .admin-sidebar,
+html.dark .admin-topbar {
+  background-color: #111113 !important;
+  border-color: #27272a !important;
+}
+
+html.dark .admin-brand .brand-name,
+html.dark .admin-name {
+  color: #f4f4f5 !important;
+}
+
+html.dark .admin-brand .brand-role,
+html.dark .admin-subtext {
+  color: #a1a1aa !important;
+}
+
+html.dark .admin-nav-item {
+  color: #a1a1aa !important;
+}
+
+html.dark .admin-nav-item:hover {
+  background-color: #18181b !important;
+  color: #f4f4f5 !important;
+}
+
+html.dark .admin-nav-item.active {
+  background-color: #ad7f45 !important;
+  color: #ffffff !important;
+}
+
+html.dark .topbar-search {
+  background-color: #18181b !important;
+  border-color: #27272a !important;
+}
+
+html.dark .topbar-search input {
+  color: #f4f4f5 !important;
+}
+
+html.dark .topbar-icon-btn {
+  color: #a1a1aa !important;
+}
+
+html.dark .topbar-icon-btn:hover {
+  background-color: #18181b !important;
+  color: #f4f4f5 !important;
+}
+
+html.dark .dash-root,
+html.dark .sellers-root,
+html.dark .sales-root,
+html.dark .messages-root,
+html.dark .disputes-root {
+  background-color: #0d0d0f !important;
+  color: #f4f4f5 !important;
+}
+
+html.dark .dash-title,
+html.dark .page-title,
+html.dark .chart-title,
+html.dark .section-label {
+  color: #f4f4f5 !important;
+}
+
+html.dark .dash-sub,
+html.dark .page-sub {
+  color: #a1a1aa !important;
+}
+
+html.dark .chart-card,
+html.dark .top-categories-card,
+html.dark .transactions-card,
+html.dark .sellers-table-card,
+html.dark .sales-stat-card,
+html.dark .review-card,
+html.dark .msg-panel,
+html.dark .chat-card-custom,
+html.dark .disp-detail-card,
+html.dark .dstat,
+html.dark .sstat-card {
+  background-color: #111113 !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+
+html.dark .tx-table th,
+html.dark .sellers-table th,
+html.dark .disp-list-header {
+  background-color: #18181b !important;
+  color: #a1a1aa !important;
+  border-color: #27272a !important;
+}
+
+html.dark .tx-table td,
+html.dark .sellers-table td,
+html.dark .disp-report-row {
+  color: #e4e4e7 !important;
+  border-color: #27272a !important;
+}
+
+html.dark .sellers-search-bar input,
+html.dark .flag-search-wrap input,
+html.dark .disp-search-box input {
+  background-color: #18181b !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+
+/* ── Admin Inventory Dark Mode ── */
+html.dark .inventory-root {
+  background-color: #0d0d0f !important;
+  color: #f4f4f5 !important;
+}
+html.dark .inv-stat {
+  background-color: #111113 !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+html.dark .inv-stat-label {
+  color: #a1a1aa !important;
+}
+html.dark .inv-stat-val {
+  color: #e4e4e7 !important;
+}
+html.dark .inv-table-card {
+  background-color: #111113 !important;
+  border-color: #27272a !important;
+}
+html.dark .inv-table th {
+  background-color: #18181b !important;
+  color: #a1a1aa !important;
+  border-bottom: 1px solid #27272a !important;
+}
+html.dark .inv-table td {
+  border-bottom: 1px solid #27272a !important;
+  color: #f4f4f5 !important;
+}
+html.dark .listing-title,
+html.dark .cell-main {
+  color: #f4f4f5 !important;
+}
+html.dark .listing-meta,
+html.dark .cell-sub {
+  color: #a1a1aa !important;
+}
+html.dark .inv-tab-btn {
+  background-color: #18181b !important;
+  border-color: #27272a !important;
+  color: #a1a1aa !important;
+}
+html.dark .inv-tab-btn:hover {
+  background-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+html.dark .inv-tab-btn.active {
+  background-color: #ad7f45 !important;
+  color: #ffffff !important;
+  border-color: #ad7f45 !important;
+}
+
+/* ── Admin Analytics Dark Mode ── */
+html.dark .analytics-root {
+  background-color: #0d0d0f !important;
+  color: #f4f4f5 !important;
+}
+html.dark .astat-card {
+  background-color: #111113 !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+html.dark .astat-label {
+  color: #a1a1aa !important;
+}
+html.dark .astat-val {
+  color: #f4f4f5 !important;
+}
+html.dark .analytics-table-card {
+  background-color: #111113 !important;
+  border-color: #27272a !important;
+}
+html.dark .analytics-table th {
+  background-color: #18181b !important;
+  color: #a1a1aa !important;
+  border-bottom: 1px solid #27272a !important;
+}
+html.dark .analytics-table td {
+  border-bottom: 1px solid #27272a !important;
+  color: #f4f4f5 !important;
+}
+html.dark .ts-date {
+  color: #f4f4f5 !important;
+}
+html.dark .ts-time {
+  color: #a1a1aa !important;
+}
+
+/* ── Admin Community Dark Mode ── */
+html.dark .community-root {
+  background-color: #0d0d0f !important;
+  color: #f4f4f5 !important;
+}
+html.dark .comm-table-card,
+html.dark .team-card {
+  background-color: #111113 !important;
+  border-color: #27272a !important;
+}
+html.dark .comm-table th,
+html.dark .team-table th,
+html.dark .perm-table th {
+  background-color: #18181b !important;
+  color: #a1a1aa !important;
+  border-bottom: 1px solid #27272a !important;
+}
+html.dark .comm-table td,
+html.dark .team-table td,
+html.dark .perm-table td {
+  border-bottom: 1px solid #27272a !important;
+  color: #f4f4f5 !important;
+}
+html.dark .user-name,
+html.dark .team-member-name,
+html.dark .perm-section-name {
+  color: #f4f4f5 !important;
+}
+html.dark .user-email,
+html.dark .team-member-email,
+html.dark .perm-section-desc {
+  color: #a1a1aa !important;
+}
+html.dark .total-users-badge {
+  background-color: #111113 !important;
+  border-color: #27272a !important;
+}
+html.dark .total-big {
+  color: #f4f4f5 !important;
+}
+html.dark .total-label,
+html.dark .total-sub {
+  color: #a1a1aa !important;
+}
+html.dark .comm-search-wrap input,
+html.dark .team-search-wrap input {
+  background-color: #18181b !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+html.dark .cbstat {
+  background-color: #111113 !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+html.dark .cbstat-label {
+  color: #a1a1aa !important;
+}
+html.dark .cbstat-val {
+  color: #f4f4f5 !important;
+}
+html.dark .cbstat-hint {
+  color: #a1a1aa !important;
+}
+html.dark .report-modal-card {
+  background-color: #111113 !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+html.dark .report-modal-card h3 {
+  color: #f4f4f5 !important;
+}
+html.dark .report-modal-form textarea,
+html.dark .report-modal-form input,
+html.dark .report-modal-form select {
+  background-color: #18181b !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+html.dark .filter-dropdown-list,
+html.dark .role-menu-dropdown {
+  background-color: #18181b !important;
+  border-color: #27272a !important;
+}
+html.dark .filter-dropdown-item,
+html.dark .role-menu-dropdown button {
+  color: #e4e4e7 !important;
+}
+html.dark .filter-dropdown-item:hover,
+html.dark .role-menu-dropdown button:hover {
+  background-color: #27272a !important;
+  color: #ffffff !important;
+}
+
+/* ── Admin Disputes Dark Mode ── */
+html.dark .disp-header-row,
+html.dark .incident-header,
+html.dark .evidence-box {
+  background-color: #18181b !important;
+  border-color: #27272a !important;
+}
+html.dark .evidence-box {
+  color: #e4e4e7 !important;
+}
+html.dark .disp-search-box input {
+  background-color: #18181b !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+html.dark .disp-filter-group select {
+  background-color: #18181b !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+html.dark .disp-report-row:hover {
+  background-color: #18181b !important;
+}
+html.dark .disp-report-row.active {
+  background-color: rgba(193, 147, 88, 0.1) !important;
+  border-left-color: #ad7f45 !important;
+}
+
+/* ── Admin Settings Dark Mode ── */
+html.dark .settings-root {
+  background-color: #0d0d0f !important;
+  color: #f4f4f5 !important;
+}
+html.dark .settings-card {
+  background-color: #111113 !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+html.dark .settings-card-title {
+  color: #f4f4f5 !important;
+}
+html.dark .cat-settings-row,
+html.dark .city-row {
+  border-bottom-color: #27272a !important;
+}
+html.dark .cat-settings-name,
+html.dark .city-name {
+  color: #f4f4f5 !important;
+}
+html.dark .cat-settings-sub {
+  color: #a1a1aa !important;
+}
+html.dark .settings-input {
+  background-color: #18181b !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+html.dark .settings-label {
+  color: #f4f4f5 !important;
+}
+html.dark .settings-hint {
+  color: #a1a1aa !important;
+}
+
+/* ── Seller Reviews Page Dark Mode ── */
+html.dark .seller-reviews-container {
+  background-color: #0d0d0f !important;
+  color: #f4f4f5 !important;
+}
+html.dark .seller-reviews-container .view-heading {
+  border-bottom-color: #27272a !important;
+}
+html.dark .seller-reviews-container h1 {
+  color: #f4f4f5 !important;
+}
+html.dark .seller-reviews-container .view-sub {
+  color: #a1a1aa !important;
+}
+html.dark .rev-summary-card {
+  background-color: #111113 !important;
+  border: 1px solid #27272a !important;
+  color: #f4f4f5 !important;
+}
+html.dark .rev-card-label {
+  color: #a1a1aa !important;
+}
+html.dark .rev-card-val {
+  color: #f4f4f5 !important;
+}
+html.dark .reviews-controls-row {
+  background-color: #111113 !important;
+  border: 1px solid #27272a !important;
+}
+html.dark .reviews-controls-row label {
+  color: #f4f4f5 !important;
+}
+html.dark .reviews-select {
+  background-color: #18181b !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+html.dark .reviews-empty-card {
+  background-color: #111113 !important;
+  border-color: #27272a !important;
+  color: #a1a1aa !important;
+}
+html.dark .reviews-empty-card h3 {
+  color: #f4f4f5 !important;
+}
+html.dark .reviews-list .review-card {
+  background-color: #111113 !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+html.dark .customer-name {
+  color: #f4f4f5 !important;
+}
+html.dark .review-date {
+  color: #a1a1aa !important;
+}
+html.dark .rating-num {
+  color: #a1a1aa !important;
+}
+html.dark .review-product-badge {
+  background-color: #18181b !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+html.dark .review-comment-text {
+  color: #e4e4e7 !important;
+}
+html.dark .seller-reply-box {
+  background-color: #18181b !important;
+  border-left-color: #ad7f45 !important;
+}
+html.dark .reply-author {
+  color: #f4f4f5 !important;
+}
+html.dark .reply-content {
+  color: #e4e4e7 !important;
+}
+html.dark .seller-help-modal {
+  background-color: #111113 !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+html.dark .seller-help-header h3 {
+  color: #f4f4f5 !important;
+}
+html.dark .seller-help-body textarea {
+  background-color: #18181b !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+
+/* ══════════════════════════════════════════════════
+   MESSAGES PAGE — Full Dark Mode
+   ══════════════════════════════════════════════════ */
+html.dark .messages-root {
+  background-color: #0d0d0f !important;
+  color: #f4f4f5 !important;
+}
+
+/* Buttons in header */
+html.dark .outline-btn-icon {
+  background-color: #18181b !important;
+  border-color: #27272a !important;
+  color: #e4e4e7 !important;
+}
+html.dark .outline-btn-icon:hover {
+  background-color: #27272a !important;
+}
+
+/* Left flag list panel */
+html.dark .msg-flag-list {
+  background-color: #111113 !important;
+  border-color: #27272a !important;
+}
+
+/* Search bar inside flag list */
+html.dark .flag-search-wrap {
+  background-color: #18181b !important;
+  border-color: #27272a !important;
+}
+html.dark .flag-search-wrap input {
+  background: transparent !important;
+  color: #f4f4f5 !important;
+}
+html.dark .flag-search-wrap input::placeholder {
+  color: #71717a !important;
+}
+
+/* Flag items in list */
+html.dark .flag-item {
+  background-color: #111113 !important;
+  border-color: #27272a !important;
+}
+html.dark .flag-item:hover {
+  background-color: #18181b !important;
+}
+html.dark .flag-item.active {
+  background-color: #1c1814 !important;
+  border-color: #ad7f45 !important;
+}
+html.dark .flag-title {
+  color: #f4f4f5 !important;
+}
+html.dark .flag-ticket,
+html.dark .flag-meta {
+  color: #a1a1aa !important;
+}
+html.dark .flag-list-title {
+  color: #71717a !important;
+}
+
+/* Right content side — chat card */
+html.dark .chat-card-custom {
+  background-color: #111113 !important;
+  border-color: #27272a !important;
+}
+html.dark .chat-card-header {
+  border-bottom-color: #27272a !important;
+}
+html.dark .chat-header-title {
+  color: #f4f4f5 !important;
+}
+html.dark .chat-header-meta {
+  color: #a1a1aa !important;
+}
+
+/* Chat body */
+html.dark .chat-body-custom {
+  background-color: #0d0d0f !important;
+}
+
+/* Chat bubbles */
+html.dark .left-bubble .bubble-text {
+  background-color: #27272a !important;
+  color: #e4e4e7 !important;
+}
+html.dark .right-bubble .bubble-text {
+  background-color: #1e293b !important;
+  color: #93c5fd !important;
+}
+html.dark .bubble-time {
+  color: #71717a !important;
+}
+
+/* Reported message block */
+html.dark .reported-message-container {
+  background-color: #1c0a0a !important;
+  border-color: #7f1d1d !important;
+}
+html.dark .reported-bubble-text {
+  color: #fca5a5 !important;
+}
+
+/* Action buttons row */
+html.dark .chat-actions-row {
+  border-top-color: #27272a !important;
+}
+html.dark .chat-action-btn.warn {
+  background-color: #18181b !important;
+  border-color: #27272a !important;
+  color: #e4e4e7 !important;
+}
+html.dark .chat-action-btn.warn:hover {
+  background-color: #27272a !important;
+}
+html.dark .actions-info-txt {
+  color: #71717a !important;
+}
+
+/* Lower info boxes */
+html.dark .info-box {
+  background-color: #111113 !important;
+  border-color: #27272a !important;
+}
+html.dark .info-box-title {
+  color: #71717a !important;
+}
+html.dark .info-label {
+  color: #a1a1aa !important;
+}
+html.dark .info-val {
+  color: #f4f4f5 !important;
+}
+html.dark .policy-section {
+  color: #a1a1aa !important;
+}
+html.dark .policy-text {
+  color: #e4e4e7 !important;
+}
+html.dark .policy-link-btn {
+  color: #c19358 !important;
+}
+
+/* Footer */
+html.dark .chat-oversight-footer {
+  background-color: #111113 !important;
+  border-top-color: #27272a !important;
+}
+html.dark .fs-label {
+  color: #71717a !important;
+}
+html.dark .fs-val {
+  color: #f4f4f5 !important;
+}
+html.dark .footer-confidential {
+  color: #71717a !important;
+}
+
+/* ══════════════════════════════════════════════════
+   DISPUTES PAGE — Remaining dark mode gaps
+   ══════════════════════════════════════════════════ */
+html.dark .disputes-root {
+  background-color: #0d0d0f !important;
+  color: #f4f4f5 !important;
+}
+
+/* Filter bar (search + dropdowns) */
+html.dark .disputes-filter-bar {
+  background-color: #111113 !important;
+  border-color: #27272a !important;
+}
+html.dark .disp-search-box input {
+  background-color: #18181b !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+html.dark .disp-search-box input::placeholder {
+  color: #71717a !important;
+}
+html.dark .disp-filter-group select {
+  background-color: #18181b !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+
+/* Tabs */
+html.dark .disputes-tabs {
+  border-bottom-color: #27272a !important;
+}
+html.dark .disp-tab-btn {
+  color: #a1a1aa !important;
+  border-color: transparent !important;
+}
+html.dark .disp-tab-btn.active {
+  color: #c19358 !important;
+  border-bottom-color: #c19358 !important;
+}
+
+/* Stats */
+html.dark .disputes-stats .dstat {
+  background-color: #111113 !important;
+  border-color: #27272a !important;
+}
+html.dark .dstat-label {
+  color: #a1a1aa !important;
+}
+html.dark .dstat-val {
+  color: #f4f4f5 !important;
+}
+html.dark .dstat-hint {
+  color: #71717a !important;
+}
+
+/* Report list */
+html.dark .disp-report-list {
+  background-color: #111113 !important;
+  border-color: #27272a !important;
+}
+html.dark .disp-list-header {
+  background-color: #18181b !important;
+  border-bottom-color: #27272a !important;
+}
+html.dark .disp-list-col {
+  color: #71717a !important;
+}
+html.dark .disp-report-row {
+  border-bottom-color: #27272a !important;
+}
+html.dark .disp-report-row:hover {
+  background-color: #18181b !important;
+}
+html.dark .disp-report-row.active {
+  background-color: #1c1814 !important;
+  border-left-color: #c19358 !important;
+}
+html.dark .disp-row-title {
+  color: #f4f4f5 !important;
+}
+html.dark .disp-row-meta,
+html.dark .disp-party,
+html.dark .party-arrow {
+  color: #a1a1aa !important;
+}
+html.dark .no-reports-found {
+  color: #71717a !important;
+}
+
+/* Detail card */
+html.dark .disp-detail-card {
+  background-color: #111113 !important;
+  border-color: #27272a !important;
+}
+html.dark .disp-detail-header {
+  border-bottom-color: #27272a !important;
+}
+html.dark .incident-title {
+  color: #f4f4f5 !important;
+}
+html.dark .incident-subtitle,
+html.dark .incident-section-label {
+  color: #a1a1aa !important;
+}
+html.dark .incident-quote-box {
+  background-color: #18181b !important;
+  border-color: #27272a !important;
+}
+html.dark .incident-quote {
+  color: #e4e4e7 !important;
+}
+html.dark .party-label {
+  color: #71717a !important;
+}
+html.dark .party-val {
+  color: #f4f4f5 !important;
+}
+html.dark .party-sub,
+html.dark .party-warnings-txt {
+  color: #a1a1aa !important;
+}
+html.dark .incident-listing-card {
+  background-color: #18181b !important;
+  border-color: #27272a !important;
+}
+html.dark .inc-listing-title {
+  color: #f4f4f5 !important;
+}
+html.dark .inc-listing-price,
+html.dark .inc-listing-seller {
+  color: #a1a1aa !important;
+}
+html.dark .policy-reference-card {
+  background-color: #18181b !important;
+  border-color: #27272a !important;
+}
+html.dark .policy-card-body {
+  color: #e4e4e7 !important;
+}
+html.dark .resolution-actions {
+  border-top-color: #27272a !important;
+}
+html.dark .res-btn.warn {
+  background-color: #18181b !important;
+  border-color: #27272a !important;
+  color: #e4e4e7 !important;
+}
+html.dark .res-btn-review {
+  background-color: #18181b !important;
+  border-color: #27272a !important;
+  color: #e4e4e7 !important;
+}
+html.dark .dismiss-btn {
+  color: #71717a !important;
+}
+
+/* ══════════════════════════════════════════════════
+   COMMUNITY — Search bars (comm + team)
+   ══════════════════════════════════════════════════ */
+html.dark .comm-search-wrap {
+  background-color: #18181b !important;
+  border-color: #27272a !important;
+}
+html.dark .comm-search-wrap input {
+  background: transparent !important;
+  color: #f4f4f5 !important;
+}
+html.dark .comm-search-wrap input::placeholder {
+  color: #71717a !important;
+}
+html.dark .team-search-wrap {
+  background-color: #18181b !important;
+  border-color: #27272a !important;
+}
+html.dark .team-search-wrap input {
+  background: transparent !important;
+  color: #f4f4f5 !important;
+}
+html.dark .team-search-wrap input::placeholder {
+  color: #71717a !important;
+}
+html.dark .comm-table-toolbar {
+  border-bottom-color: #27272a !important;
+}
+
+/* Filter dropdown trigger button */
+html.dark .adv-filter-btn {
+  background-color: #18181b !important;
+  border-color: #27272a !important;
+  color: #e4e4e7 !important;
+}
+
+
+

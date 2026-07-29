@@ -45,12 +45,22 @@
   letter-spacing: -0.5px;
 }
 
+html.dark .brand-logo-name,
+:root.dark .brand-logo-name {
+  color: #ffffff !important;
+}
+
 .brand-logo-tagline {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-weight: 700;
   color: #333333;
   margin-top: 4px;
   text-transform: uppercase;
+}
+
+html.dark .brand-logo-tagline,
+:root.dark .brand-logo-tagline {
+  color: #c19358 !important;
 }
 
 /* --- SIZE VARIATIONS (For Default/Marketplace variant, scale factor 1.8) --- */

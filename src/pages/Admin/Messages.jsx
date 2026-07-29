@@ -135,25 +135,31 @@ export default function Messages() {
           </div>
           <p className="flag-list-title">FLAGGED CHAT QUEUE ({filteredFlags.length})</p>
 
-          {filteredFlags.map(f => (
-            <div
-              key={f.id}
-              className={`flag-item ${activeReport?.id === f.id ? 'active' : ''}`}
-              onClick={() => setActiveReportId(f.id)}
-            >
-              <div className="flag-item-top">
-                <span className={`priority-badge ${f.priorityType}`}>
-                  {f.priority === 'High' && <AlertTriangle size={10} style={{ marginRight: '4px' }} />}
-                  {f.priority === 'High' ? '🔴 High Risk' : f.priority === 'Medium' ? '🟠 Medium' : '🟢 Low'}
-                </span>
-                <span className="flag-time"><Clock size={11} style={{ marginRight: '4px' }} /> {f.timeAgo}</span>
+          {filteredFlags.length > 0 ? (
+            filteredFlags.map(f => (
+              <div
+                key={f.id}
+                className={`flag-item ${activeReport?.id === f.id ? 'active' : ''}`}
+                onClick={() => setActiveReportId(f.id)}
+              >
+                <div className="flag-item-top">
+                  <span className={`priority-badge ${f.priorityType}`}>
+                    {f.priority === 'High' && <AlertTriangle size={10} style={{ marginRight: '4px' }} />}
+                    {f.priority === 'High' ? '🔴 High Risk' : f.priority === 'Medium' ? '🟠 Medium' : '🟢 Low'}
+                  </span>
+                  <span className="flag-time"><Clock size={11} style={{ marginRight: '4px' }} /> {f.timeAgo}</span>
+                </div>
+                <p className="flag-title">{f.reportType}</p>
+                <p className="flag-ticket">{f.ticketId} · {f.listing ? f.listing.title : 'Chat Thread'}</p>
+                <p className="flag-meta">Accused: {f.accused?.username} | Reporter: {f.reporter?.username}</p>
+                <p className="flag-rule">Policy: {f.reportType}</p>
               </div>
-              <p className="flag-title">{f.reportType}</p>
-              <p className="flag-ticket">{f.ticketId} · {f.listing ? f.listing.title : 'Chat Thread'}</p>
-              <p className="flag-meta">Accused: {f.accused?.username} | Reporter: {f.reporter?.username}</p>
-              <p className="flag-rule">Policy: {f.reportType}</p>
+            ))
+          ) : (
+            <div style={{ padding: '32px 16px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+              No flagged chat reports currently in queue.
             </div>
-          ))}
+          )}
         </div>
 
         {/* Right side: Chat preview + Profile/Policy stats */}

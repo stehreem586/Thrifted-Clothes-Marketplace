@@ -251,46 +251,14 @@ export const ListingsProvider = ({ children }) => {
   const [reviews, setReviews] = useState(() => {
     try {
       const saved = localStorage.getItem('secondlife_seller_reviews');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {}
-    return [
-      {
-        id: 'rev-1',
-        listingId: 101,
-        listingTitle: 'Vintage 90s Leather Biker Jacket',
-        listingImage: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&q=80',
-        customerName: 'Sarah Jenkins',
-        customerAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&q=80',
-        rating: 5,
-        comment: 'Absolutely in love with this jacket! Quality is even better than shown in pictures, super fast shipping.',
-        date: '2026-07-25',
-        reply: { text: 'Thank you Sarah! So glad you love the jacket! Enjoy!', date: '2026-07-25' }
-      },
-      {
-        id: 'rev-2',
-        listingId: 101,
-        listingTitle: 'Vintage 90s Leather Biker Jacket',
-        listingImage: 'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&q=80',
-        customerName: 'Ahmere Khan',
-        customerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=80',
-        rating: 4,
-        comment: 'Great fit and genuine vintage feel. Mild scent from storage but cleaned up nicely.',
-        date: '2026-07-24',
-        reply: null
-      },
-      {
-        id: 'rev-3',
-        listingId: 102,
-        listingTitle: 'Hand-repaired Eco Denim',
-        listingImage: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=400&q=80',
-        customerName: 'Mariam Ali',
-        customerAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80',
-        rating: 5,
-        comment: 'The custom sashiko stitching on these jeans is artistic perfection. 10/10 recommended seller!',
-        date: '2026-07-22',
-        reply: { text: 'Appreciate the kind words Mariam! Sustainability is our priority.', date: '2026-07-23' }
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter(r => !['rev-1', 'rev-2', 'rev-3'].includes(String(r.id)));
+        }
       }
-    ];
+    } catch (e) {}
+    return [];
   });
 
   useEffect(() => {
@@ -332,6 +300,10 @@ export const ListingsProvider = ({ children }) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
+        // Automatically promote user role to seller in database & local storage when publishing a listing
+        await supabase.from('profiles').update({ role: 'seller' }).eq('id', session.user.id);
+        localStorage.setItem('userRole', 'seller');
+
         await supabase.from('listings').insert([{
           title: newProduct.title,
           category: newProduct.category,

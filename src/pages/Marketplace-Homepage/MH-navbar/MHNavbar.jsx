@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { useTheme } from '../../../context/ThemeContext';
+import { useListings } from '../../../context/ListingsContext';
 import EditProfile from '../../../pages/EditProfile/EditProfile';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import './MHNavbar.css';
@@ -13,11 +14,18 @@ const MHNavbar = () => {
   const currentPath = location.pathname;
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
+  const [showNotifModal, setShowNotifModal] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState('Pakistan');
   const { user, profile, logout, switchMode } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
+  const { notifications, markNotificationRead, markAllNotificationsRead } = useListings();
 
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
+
+  const unreadCount = notifications ? notifications.filter(n => !n.read).length : 0;
+
+  // Persistent Admin role check
+  const isAdmin = profile?.role === 'admin' || user?.user_metadata?.role === 'admin' || localStorage.getItem('userRole') === 'admin';
 
   // Sync searchQuery state with the query param in the URL
   useEffect(() => {
@@ -129,14 +137,31 @@ const MHNavbar = () => {
             </ul>
 
             <div className="mh-icons-group">
-              <button className="mh-icon-btn" aria-label="Notifications">
+              {/* Universal Notification Bell */}
+              <button
+                className="mh-icon-btn"
+                aria-label="Notifications"
+                onClick={() => setShowNotifModal(true)}
+                style={{ position: 'relative' }}
+              >
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
                   <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
                 </svg>
+                {unreadCount > 0 && (
+                  <span style={{
+                    position: 'absolute', top: '2px', right: '2px',
+                    minWidth: '16px', height: '16px', background: '#ef4444',
+                    borderRadius: '50%', fontSize: '9px', fontWeight: '700',
+                    color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    lineHeight: 1, padding: '0 2px'
+                  }}>
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
               </button>
 
-              <button className="mh-icon-btn" aria-label="Messages">
+              <button className="mh-icon-btn" aria-label="Messages" onClick={() => navigate('/chat')}>
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
                   <polyline points="22,6 12,13 2,6"></polyline>
@@ -242,7 +267,7 @@ const MHNavbar = () => {
             </div>
 
             <div className="mh-actions-divider"></div>
-            {profile?.role === 'admin' || user?.user_metadata?.role === 'admin' || localStorage.getItem('userRole') === 'admin' ? (
+            {isAdmin ? (
               <button
                 className="mh-sell-btn mh-admin-btn"
                 onClick={() => navigate('/admin')}
@@ -257,8 +282,120 @@ const MHNavbar = () => {
         </div>
       </nav>
 
-      {/* Edit Profile slide-in panel */}
-      <EditProfile isOpen={showEditProfile} onClose={() => setShowEditProfile(false)} />
+      {/* Universal Notifications Modal */}
+      {showNotifModal && (
+        <div className="seller-help-overlay" onClick={() => { markAllNotificationsRead(); setShowNotifModal(false); }}>
+          <div
+            className="seller-help-modal notif-modal-pro"
+            onClick={e => e.stopPropagation()}
+            style={{ maxWidth: '480px', padding: 0, overflow: 'hidden', borderRadius: '18px' }}
+          >
+            <div style={{
+              background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+              padding: '20px 22px 16px',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '36px', height: '36px', background: 'rgba(255,255,255,0.1)',
+                  borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" strokeWidth="2">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                  </svg>
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontWeight: '700', color: '#fff', fontSize: '15px' }}>Notifications</p>
+                  <p style={{ margin: 0, fontSize: '11px', color: 'rgba(255,255,255,0.5)' }}>
+                    {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
+                  </p>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                {unreadCount > 0 && (
+                  <button
+                    onClick={markAllNotificationsRead}
+                    style={{
+                      background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)',
+                      color: '#e2e8f0', fontSize: '11px', fontWeight: '600',
+                      padding: '5px 12px', borderRadius: '8px', cursor: 'pointer'
+                    }}
+                  >
+                    Mark all read
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowNotifModal(false)}
+                  style={{
+                    background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff',
+                    width: '30px', height: '30px', borderRadius: '8px', cursor: 'pointer',
+                    fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}
+                >✕</button>
+              </div>
+            </div>
+
+            <div style={{ maxHeight: '400px', overflowY: 'auto', background: '#f8fafc' }}>
+              {notifications.length === 0 ? (
+                <div style={{ padding: '50px 24px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '44px', marginBottom: '12px' }}>🔕</div>
+                  <p style={{ margin: 0, fontWeight: '700', color: '#1e293b', fontSize: '15px' }}>All caught up!</p>
+                  <p style={{ margin: '6px 0 0', color: '#94a3b8', fontSize: '13px', lineHeight: '1.5' }}>
+                    Buyer activity, messages, and orders will appear here in real-time.
+                  </p>
+                </div>
+              ) : (
+                <div style={{ padding: '8px 0' }}>
+                  {notifications.map((n) => (
+                    <div
+                      key={n.id}
+                      onClick={() => markNotificationRead(n.id)}
+                      style={{
+                        display: 'flex', alignItems: 'flex-start', gap: '12px',
+                        padding: '14px 18px',
+                        background: n.read ? 'transparent' : '#fff',
+                        borderBottom: '1px solid #f1f5f9',
+                        cursor: 'pointer',
+                        position: 'relative'
+                      }}
+                    >
+                      {!n.read && (
+                        <div style={{
+                          position: 'absolute', top: '18px', right: '14px',
+                          width: '8px', height: '8px', borderRadius: '50%',
+                          background: '#3b82f6'
+                        }} />
+                      )}
+                      <div style={{
+                        width: '38px', height: '38px', borderRadius: '12px',
+                        background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '18px', flexShrink: 0
+                      }}>
+                        🔔
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
+                          <p style={{ margin: 0, fontWeight: n.read ? '500' : '700', fontSize: '13px', color: '#0f172a' }}>
+                            {n.title}
+                          </p>
+                          <span style={{ fontSize: '10.5px', color: '#94a3b8', marginLeft: '8px' }}>
+                            {n.time}
+                          </span>
+                        </div>
+                        <p style={{ margin: 0, fontSize: '12px', color: '#64748b', lineHeight: '1.45' }}>
+                          {n.text}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
     </>
   );
 };

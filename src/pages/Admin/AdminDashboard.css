@@ -35,24 +35,145 @@
   align-items: center;
 }
 
-.period-btn {
-  padding: 8px 16px;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  background: #fff;
-  font-size: 13px;
-  font-weight: 500;
-  color: #374151;
-  cursor: pointer;
-  transition: all 0.18s;
+/* ── Period Dropdown Filter ── */
+.period-dropdown-wrap {
+  position: relative;
 }
 
-.period-btn.active,
-.period-btn:hover {
-  background: #1a1a2e;
-  color: #fff;
-  border-color: #1a1a2e;
+.period-dropdown-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: 10px;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
+  white-space: nowrap;
+  min-width: 160px;
+  justify-content: space-between;
 }
+
+.period-dropdown-btn:hover {
+  border-color: #c19358;
+  box-shadow: 0 2px 8px rgba(193,147,88,0.15);
+}
+
+.period-dropdown-icon {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.period-dropdown-label {
+  flex: 1;
+  text-align: left;
+}
+
+.period-dropdown-chevron {
+  color: #94a3b8;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.period-dropdown-chevron.open {
+  transform: rotate(180deg);
+  color: #c19358;
+}
+
+/* Dropdown list */
+.period-dropdown-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 180px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+  overflow: hidden;
+  z-index: 999;
+  animation: dropdown-in 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes dropdown-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+
+.period-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 16px;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.14s, color 0.14s;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.period-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.period-dropdown-item:hover {
+  background: #fef7ee;
+  color: #ad7f45;
+}
+
+.period-dropdown-item.selected {
+  background: linear-gradient(90deg, #fef7ee, #fff8f0);
+  color: #ad7f45;
+  font-weight: 700;
+}
+
+.period-dropdown-item-icon {
+  font-size: 15px;
+  line-height: 1;
+}
+
+/* Dark mode */
+.dark .period-dropdown-btn {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.12);
+  color: #e2e8f0;
+}
+
+.dark .period-dropdown-btn:hover {
+  border-color: #c19358;
+}
+
+.dark .period-dropdown-list {
+  background: #1e293b;
+  border-color: rgba(255,255,255,0.1);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+}
+
+.dark .period-dropdown-item {
+  color: #94a3b8;
+  border-bottom-color: rgba(255,255,255,0.06);
+}
+
+.dark .period-dropdown-item:hover {
+  background: rgba(193,147,88,0.12);
+  color: #c19358;
+}
+
+.dark .period-dropdown-item.selected {
+  background: rgba(193,147,88,0.18);
+  color: #c19358;
+}
+
 
 .export-btn {
   padding: 8px 16px;
@@ -246,6 +367,61 @@
   border-bottom: 1px solid #f3f4f6;
   padding-bottom: 8px;
 }
+
+/* ── Chart Tooltip ── */
+.chart-tooltip {
+  background: #1e293b;
+  color: #f8fafc;
+  border-radius: 10px;
+  padding: 9px 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  font-size: 12px;
+  line-height: 1.5;
+  pointer-events: none;
+  white-space: nowrap;
+  border: 1px solid rgba(255,255,255,0.08);
+  animation: tooltip-pop 0.15s ease;
+}
+
+@keyframes tooltip-pop {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.chart-tooltip-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+
+.chart-tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 3px;
+  font-size: 12px;
+  color: #e2e8f0;
+}
+
+.chart-tooltip-row:last-child { margin-bottom: 0; }
+
+.chart-tooltip-row b {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.ct-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ct-dot.gmv    { background: #c19358; }
+.ct-dot.signup { background: #3b82f6; }
 
 .chart-weeks {
   display: flex;
