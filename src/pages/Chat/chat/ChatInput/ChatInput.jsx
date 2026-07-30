@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import EmojiButton from '../EmojiButton/EmojiButton';
 import AttachmentButton from '../AttachmentButton/AttachmentButton';
 import SendButton from '../SendButton/SendButton';
@@ -6,6 +6,11 @@ import './ChatInput.css';
 
 const ChatInput = ({ onSendMessage }) => {
   const [text, setText] = useState('');
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -36,12 +41,14 @@ const ChatInput = ({ onSendMessage }) => {
       <EmojiButton onClick={handleEmojiClick} />
       <div className="input-field-container">
         <input
+          ref={inputRef}
           type="text"
           placeholder="Write a message..."
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
           className="chat-text-input"
+          autoFocus
         />
       </div>
       <SendButton disabled={!text.trim()} />

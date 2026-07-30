@@ -360,6 +360,7 @@ export const ListingsProvider = ({ children }) => {
       sustainability: 'High',
       description: item.description || 'Curated pre-loved thrift item from a verified seller.',
       seller: {
+        id: item.seller_id || userId,
         name: sellerProf.name || 'Verified Seller Store',
         rating: totalSalesCount > 0 ? '5.0 (Verified)' : 'New Seller',
         location: sellerProf.city ? `${sellerProf.city}, Pakistan` : 'Pakistan',

@@ -4,16 +4,24 @@ import MessageTime from '../MessageTime/MessageTime';
 import TypingIndicator from '../TypingIndicator/TypingIndicator';
 import './MessageList.css';
 
-const MessageList = ({ messages, showTyping }) => {
+const MessageList = ({ messages, showTyping, onScrollTop }) => {
   const bottomRef = useRef(null);
+  const isFirstLoad = useRef(true);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    bottomRef.current?.scrollIntoView({ behavior: isFirstLoad.current ? 'auto' : 'smooth' });
+    isFirstLoad.current = false;
   }, [messages, showTyping]);
+
+  const handleScroll = (e) => {
+    if (onScrollTop && e.target.scrollTop < 80) {
+      onScrollTop();
+    }
+  };
 
   return (
     <div className="message-list-container">
-      <div className="message-list-scroller">
+      <div className="message-list-scroller" onScroll={handleScroll}>
         {messages.map((msg, index) => {
           const isSender = msg.sender === 'me';
           return (
