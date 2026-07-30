@@ -8,7 +8,7 @@ const ITEMS_PER_PAGE = 4;
 
 function Inventory({ inventorySearch, onNavigateToProfile }) {
   const { listings, addListing, updateListing, deleteListing } = useListings();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const [inventoryMode, setInventoryMode] = useState('list'); // 'list' | 'create' | 'edit'
   const [editingListing, setEditingListing] = useState(null);
   const [listingFilter, setListingFilter] = useState('All');
@@ -28,7 +28,7 @@ function Inventory({ inventorySearch, onNavigateToProfile }) {
   const [formPrice, setFormPrice] = useState('');
   const [formSize, setFormSize] = useState('');
   const [formTags, setFormTags] = useState([]);
-  const [formImage, setFormImage] = useState('');
+  const [formImages, setFormImages] = useState(['', '', '', '', '', '']); // 6 slots: index 0 = main
 
   // Gate Check: Profile + Phone Verification
   const isProfileComplete = () => {
@@ -39,7 +39,7 @@ function Inventory({ inventorySearch, onNavigateToProfile }) {
     setEditingListing(null);
     setFormTitle(''); setFormCategory(''); setFormCondition('');
     setFormDescription(''); setFormPrice(''); setFormSize('');
-    setFormTags(['Sustainable']); setFormImage('');
+    setFormTags(['Sustainable']); setFormImages(['', '', '', '', '', '']);
     setInventoryMode('create');
   };
 
@@ -52,7 +52,13 @@ function Inventory({ inventorySearch, onNavigateToProfile }) {
     setFormPrice(product.price ? product.price.toString() : '');
     setFormSize(product.size || '');
     setFormTags(product.tags || []);
-    setFormImage(product.image || '');
+    // Populate images array: use product.images if available, else put product.image in slot 0
+    const existingImages = Array.isArray(product.images) && product.images.length > 0
+      ? product.images
+      : (product.image ? [product.image] : []);
+    const imgSlots = ['', '', '', '', '', ''];
+    existingImages.slice(0, 6).forEach((img, idx) => { imgSlots[idx] = img || ''; });
+    setFormImages(imgSlots);
     setInventoryMode('edit');
   };
 
@@ -62,15 +68,27 @@ function Inventory({ inventorySearch, onNavigateToProfile }) {
     }
   };
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = (e, slotIndex) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setFormImage(reader.result);
+        setFormImages(prev => {
+          const updated = [...prev];
+          updated[slotIndex] = reader.result;
+          return updated;
+        });
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleRemoveImage = (slotIndex) => {
+    setFormImages(prev => {
+      const updated = [...prev];
+      updated[slotIndex] = '';
+      return updated;
+    });
   };
 
   const handleToggleTag = (tag) => {
@@ -86,7 +104,9 @@ function Inventory({ inventorySearch, onNavigateToProfile }) {
     if (!formTitle || !formPrice) { alert('Please fill out Title and Price fields.'); return; }
     const priceNum = parseFloat(formPrice);
     if (isNaN(priceNum)) { alert('Price must be a valid number.'); return; }
-    const imageToUse = formImage || 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=400&q=80';
+
+    const filledImages = formImages.filter(img => img && img.trim() !== '');
+    const mainImage = filledImages[0] || 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=400&q=80';
 
     if (inventoryMode === 'create') {
       await addListing({
@@ -98,7 +118,8 @@ function Inventory({ inventorySearch, onNavigateToProfile }) {
         condition: formCondition || 'Good',
         description: formDescription,
         tags: formTags,
-        image: imageToUse
+        image: mainImage,
+        images: filledImages
       });
     } else if (inventoryMode === 'edit' && editingListing) {
       await updateListing(editingListing.id, {
@@ -110,7 +131,8 @@ function Inventory({ inventorySearch, onNavigateToProfile }) {
         condition: formCondition,
         description: formDescription,
         tags: formTags,
-        image: imageToUse
+        image: mainImage,
+        images: filledImages
       });
     }
     setInventoryMode('list');
@@ -139,6 +161,18 @@ function Inventory({ inventorySearch, onNavigateToProfile }) {
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const paginatedListings = filteredListings.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
+  const getSellerStatus = () => {
+    try {
+      const raw = localStorage.getItem('secondlife_seller_statuses');
+      if (raw && user?.id) {
+        const map = JSON.parse(raw);
+        if (map[user.id]) return map[user.id];
+      }
+    } catch(e) {}
+    return profile?.seller_status || (profile?.status === 'flagged' || profile?.status === 'suspended' ? 'Suspended' : profile?.status === 'pending' ? 'Pending' : 'Verified');
+  };
+  const currentSellerStatus = getSellerStatus();
+
   /* ────────── LIST VIEW ────────── */
   if (inventoryMode === 'list') {
     return (
@@ -155,6 +189,31 @@ function Inventory({ inventorySearch, onNavigateToProfile }) {
             Create New Listing
           </button>
         </div>
+
+        {/* Dynamic Seller Status Alert Banner */}
+        {currentSellerStatus === 'Pending' && (
+          <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', padding: '16px 20px', marginTop: '16px', display: 'flex', alignItems: 'center', gap: '14px', color: '#92400e' }}>
+            <span style={{ fontSize: '24px' }}>⏳</span>
+            <div>
+              <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#b45309' }}>Seller Verification Pending Admin Approval</h4>
+              <p style={{ margin: '4px 0 0 0', fontSize: '13px', lineHeight: '1.4', color: '#78350f' }}>
+                Your seller verification request is under review by Admin. You can create listings, but they will not be listed publicly on the marketplace until your account is verified by Admin.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {(currentSellerStatus === 'Suspended' || currentSellerStatus === 'Flagged') && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '16px 20px', marginTop: '16px', display: 'flex', alignItems: 'center', gap: '14px', color: '#991b1b' }}>
+            <span style={{ fontSize: '24px' }}>🚫</span>
+            <div>
+              <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#dc2626' }}>Seller Account Suspended / Flagged</h4>
+              <p style={{ margin: '4px 0 0 0', fontSize: '13px', lineHeight: '1.4', color: '#7f1d1d' }}>
+                Your seller account has been suspended by Admin. Your listings are currently unlisted from the public marketplace.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Filter & Sort */}
         <div className="filter-sort-row">
@@ -497,41 +556,53 @@ function Inventory({ inventorySearch, onNavigateToProfile }) {
         {/* Left: Photos */}
         <div className="form-left-col">
           <div className="photos-upload-card">
-            <h3>Photos</h3>
-            <p className="photos-card-sub">Upload up to 6 high-quality photos. Show all details and labels.</p>
+            <h3>Photos <span style={{ fontSize: '13px', fontWeight: '500', color: '#64748b' }}>({formImages.filter(i => i).length}/6 uploaded)</span></h3>
+            <p className="photos-card-sub">Upload up to 6 photos. First photo is your main cover image.</p>
+
+            {/* Main cover photo — slot 0 */}
             <div className="cover-photo-upload-box">
-              {formImage ? (
+              {formImages[0] ? (
                 <div className="uploaded-cover-preview">
-                  <img src={formImage} alt="Uploaded Cover" />
-                  <button className="remove-image-badge" onClick={() => setFormImage('')} type="button">✕</button>
+                  <img src={formImages[0]} alt="Cover" />
+                  <button className="remove-image-badge" onClick={() => handleRemoveImage(0)} type="button">✕</button>
+                  <span style={{ position: 'absolute', bottom: '8px', left: '8px', background: '#0f172a', color: '#fff', fontSize: '10px', fontWeight: '700', padding: '2px 8px', borderRadius: '8px' }}>MAIN</span>
                 </div>
               ) : (
-                <label htmlFor="cover-photo-file" className="upload-placeholder-content" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <label htmlFor="cover-photo-file-0" className="upload-placeholder-content" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
                   <div className="camera-icon-wrapper">
                     <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
                       <circle cx="12" cy="13" r="4" />
                     </svg>
                   </div>
-                  <span>+ Upload Cover Photo</span>
-                  <input
-                    id="cover-photo-file"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileUpload}
-                    style={{ display: 'none' }}
-                  />
+                  <span>+ Main Cover Photo</span>
+                  <input id="cover-photo-file-0" type="file" accept="image/*" onChange={e => handleFileUpload(e, 0)} style={{ display: 'none' }} />
                 </label>
-
               )}
             </div>
-            <div className="small-photos-grid">
-              {['Detail', 'Label', 'Flaws', 'Fit'].map(label => (
-                <div key={label} className="small-photo-upload-item">
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-                  </svg>
-                  <span>{label}</span>
+
+            {/* Additional 5 image slots */}
+            <div className="small-photos-grid" style={{ gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px', marginTop: '12px' }}>
+              {[1, 2, 3, 4, 5].map(slotIdx => (
+                <div key={slotIdx} style={{ position: 'relative', aspectRatio: '1', borderRadius: '8px', overflow: 'hidden', border: '1.5px dashed #cbd5e1', background: '#f8fafc' }}>
+                  {formImages[slotIdx] ? (
+                    <>
+                      <img src={formImages[slotIdx]} alt={`Photo ${slotIdx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveImage(slotIdx)}
+                        style={{ position: 'absolute', top: '4px', right: '4px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', width: '18px', height: '18px', cursor: 'pointer', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
+                      >✕</button>
+                    </>
+                  ) : (
+                    <label htmlFor={`photo-slot-${slotIdx}`} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', gap: '4px' }}>
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#94a3b8" strokeWidth="2.5">
+                        <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                      </svg>
+                      <span style={{ fontSize: '9px', color: '#94a3b8', fontWeight: '600' }}>Photo {slotIdx + 1}</span>
+                      <input id={`photo-slot-${slotIdx}`} type="file" accept="image/*" onChange={e => handleFileUpload(e, slotIdx)} style={{ display: 'none' }} />
+                    </label>
+                  )}
                 </div>
               ))}
             </div>
@@ -609,9 +680,13 @@ function Inventory({ inventorySearch, onNavigateToProfile }) {
             </div>
 
             <div className="form-group-block">
-              <label className="form-label">Simulation - Image URL (Optional)</label>
-              <input type="text" placeholder="Or enter image URL here..." className="form-input-text"
-                value={formImage} onChange={e => setFormImage(e.target.value)} />
+              <label className="form-label">Cover Image URL (Optional)</label>
+              <input type="text" placeholder="Paste image URL as alternative to uploading..." className="form-input-text"
+                value={formImages[0]} onChange={e => {
+                  const updated = [...formImages];
+                  updated[0] = e.target.value;
+                  setFormImages(updated);
+                }} />
             </div>
 
             <div className="form-group-block">

@@ -117,7 +117,11 @@ export const ListingsProvider = ({ children }) => {
             category: item.category || 'Other',
             size: item.size || 'OS',
             price: parseFloat(item.price) || 0,
-            status: item.status === 'sold' ? 'Sold' : item.status === 'draft' ? 'Draft' : 'Active',
+            status: item.status === 'sold' ? 'Sold'
+              : item.status === 'approved' || item.status === 'active' ? 'Approved'
+              : item.status === 'rejected' ? 'Rejected'
+              : item.status === 'draft' ? 'Draft'
+              : 'Pending',
             views: item.views || 0,
             likes: item.likes || 0,
             condition: item.condition || 'Good',
@@ -141,6 +145,10 @@ export const ListingsProvider = ({ children }) => {
     };
 
     fetchFromSupabase();
+
+    const handleListingStatusUpdate = () => fetchFromSupabase();
+    window.addEventListener('listingStatusUpdated', handleListingStatusUpdate);
+    return () => window.removeEventListener('listingStatusUpdated', handleListingStatusUpdate);
   }, [userId]);
 
   // ─────────────────────────────────────────────────────────
@@ -277,49 +285,157 @@ export const ListingsProvider = ({ children }) => {
   // ─────────────────────────────────────────────────────────
   // 7. Listing CRUD & Admin Approvals
   // ─────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────
+  // 7. Listing CRUD & Admin Approvals (Two-Tier Verification)
+  // ─────────────────────────────────────────────────────────
   const addListing = async (productData) => {
+    // ── Step 1: Determine real current seller status from Supabase profile ──
+    let currentSellerStatus = null;
+    let isFirstTimeSeller = false;
+
+    try {
+      if (userId) {
+        // Read fresh from Supabase — most authoritative source
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('seller_status, status')
+          .eq('id', userId)
+          .single();
+
+        if (profileData) {
+          // Use seller_status if set, otherwise derive from status
+          const rawStatus = profileData.seller_status;
+          if (rawStatus === 'Verified') {
+            currentSellerStatus = 'Verified';
+          } else if (rawStatus === 'Pending') {
+            currentSellerStatus = 'Pending';
+          } else if (rawStatus === 'Flagged' || rawStatus === 'Suspended') {
+            currentSellerStatus = 'Flagged';
+          } else {
+            // seller_status is null/empty — brand new seller
+            currentSellerStatus = null;
+          }
+        }
+      }
+    } catch (e) {}
+
+    // Local override check (for cases where admin changed status but DB hasn't synced)
+    try {
+      const rawStatuses = localStorage.getItem('secondlife_seller_statuses');
+      if (rawStatuses && userId) {
+        const parsedMap = JSON.parse(rawStatuses);
+        if (parsedMap[userId]) {
+          currentSellerStatus = parsedMap[userId];
+        }
+      }
+    } catch (e) {}
+
+    // ── Step 2: First-time seller = no seller_status set (null) OR has no non-draft listings ──
+    const userSubmittedListings = listings.filter(l => l.status !== 'Draft');
+    if (currentSellerStatus === null || currentSellerStatus === undefined || userSubmittedListings.length === 0) {
+      isFirstTimeSeller = true;
+    }
+
+    // ── Step 3: If first-time seller, set status to Pending ──
+    if (isFirstTimeSeller && currentSellerStatus !== 'Verified') {
+      currentSellerStatus = 'Pending';
+
+      // Persist to local map immediately for cross-component sync
+      try {
+        let localStatuses = {};
+        const rawLocal = localStorage.getItem('secondlife_seller_statuses');
+        if (rawLocal) localStatuses = JSON.parse(rawLocal);
+        if (userId) {
+          localStatuses[userId] = 'Pending';
+          localStorage.setItem('secondlife_seller_statuses', JSON.stringify(localStatuses));
+        }
+      } catch (e) {}
+
+      // Persist to Supabase DB
+      if (userId) {
+        try {
+          await supabase.from('profiles').update({
+            role: 'seller',
+            seller_status: 'Pending',
+            status: 'pending'
+          }).eq('id', userId);
+        } catch (_) {}
+      }
+    }
+
     const newProduct = {
       id: Date.now(),
       views: 0,
       likes: 0,
       createdAt: new Date().toISOString(),
       status: productData.status === 'Draft' ? 'Draft' : 'Pending',
+      seller_id: userId,
       ...productData
     };
 
     setListings(prev => [newProduct, ...prev]);
 
     if (newProduct.status === 'Pending') {
-      addNotification({
-        title: 'Listing Request Sent ⏳',
-        text: `"${productData.title}" has been submitted for Admin approval. Status: Pending.`,
-        type: 'listing'
-      });
+      if (isFirstTimeSeller) {
+        addNotification({
+          title: 'Seller & Listing Verification Sent ⏳',
+          text: `First-time request! Both your Seller Verification and Listing Approval have been sent to Admin for review. Your listing will go live once approved.`,
+          type: 'listing'
+        });
+      } else {
+        addNotification({
+          title: 'Listing Request Sent ⏳',
+          text: `"${productData.title}" has been submitted for Admin approval. Status: Pending.`,
+          type: 'listing'
+        });
+      }
     }
 
+    // ── Step 4: Save listing to Supabase (always) ──
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        // Automatically promote user role to seller in database & local storage when publishing a listing
-        await supabase.from('profiles').update({ role: 'seller' }).eq('id', session.user.id);
-        localStorage.setItem('userRole', 'seller');
+        const uid = session.user.id;
 
-        await supabase.from('listings').insert([{
+        // Update profile in Supabase: set role='seller' and status='pending'
+        // This is the native Supabase signal for a seller awaiting admin verification
+        try {
+          await supabase.from('profiles').update({
+            role: 'seller',
+            status: 'pending'
+          }).eq('id', uid);
+        } catch (_) {}
+
+        // Insert listing into Supabase and select returned record to get real Supabase ID
+        const { data: insertedRows, error: insertError } = await supabase.from('listings').insert([{
           title: newProduct.title,
           category: newProduct.category,
           size: newProduct.size,
           price: newProduct.price,
-          status: newProduct.status?.toLowerCase() || 'pending',
+          status: 'pending',
           condition: newProduct.condition,
-          description: newProduct.description,
-          tags: newProduct.tags,
-          image_url: newProduct.image,
-          seller_id: session.user.id
-        }]);
+          description: newProduct.description || '',
+          image_url: Array.isArray(newProduct.images) && newProduct.images.length > 0
+            ? newProduct.images[0]
+            : (newProduct.image || ''),
+          seller_id: uid
+        }]).select();
+
+        if (insertError) {
+          console.error('⚠️ Listing insert failed:', insertError.message, insertError.details);
+        } else if (insertedRows && insertedRows.length > 0) {
+          const realId = insertedRows[0].id;
+          newProduct.id = realId;
+          setListings(prev => prev.map(item => item.id === newProduct.id ? { ...item, id: realId } : item));
+        }
       }
     } catch (err) {
-      console.warn('Supabase insert skipped:', err.message);
+      console.error('⚠️ Supabase addListing error:', err.message);
     }
+
+    window.dispatchEvent(new CustomEvent('sellerStatusUpdated', {
+      detail: { sellerId: userId, status: currentSellerStatus || 'Pending' }
+    }));
 
     return newProduct;
   };
@@ -332,7 +448,7 @@ export const ListingsProvider = ({ children }) => {
       type: 'listing'
     });
     try {
-      await supabase.from('listings').update({ status: 'approved' }).eq('id', id);
+      await supabase.from('listings').update({ status: 'active' }).eq('id', id);
     } catch (e) {}
   };
 
@@ -378,7 +494,7 @@ export const ListingsProvider = ({ children }) => {
   };
 
   // ─────────────────────────────────────────────────────────
-  // 8. Merge this user's active/approved listings into buyer marketplace
+  // 8. Merge active/approved listings into buyer marketplace (Only for VERIFIED sellers)
   // ─────────────────────────────────────────────────────────
   const getSellerProfile = () => {
     try {
@@ -392,32 +508,49 @@ export const ListingsProvider = ({ children }) => {
     return {};
   };
 
+  const getCurrentSellerStatus = () => {
+    try {
+      const rawStatuses = localStorage.getItem('secondlife_seller_statuses');
+      if (rawStatuses) {
+        const parsedMap = JSON.parse(rawStatuses);
+        if (userId && parsedMap[userId]) return parsedMap[userId];
+      }
+    } catch (e) {}
+    return 'Verified';
+  };
+
   const sellerProf = getSellerProfile();
+  const currentSellerStatus = getCurrentSellerStatus();
   const totalSalesCount = listings.filter(i => i.status === 'Sold').length + orders.length;
 
-  const activeSellerProductsForBuyer = listings
-    .filter(item => item.status === 'Approved' || item.status === 'Active')
-    .map(item => ({
-      id: `seller-${item.id}`,
-      originalId: item.id,
-      title: item.title,
-      price: `PKR ${parseFloat(item.price).toLocaleString()}`,
-      numericPrice: parseFloat(item.price),
-      size: item.size ? `Size ${item.size}` : 'One Size',
-      image: item.image,
-      wishlisted: false,
-      category: item.category || 'Vintage',
-      condition: item.condition || 'Good',
-      sustainability: 'High',
-      description: item.description || 'Curated pre-loved thrift item from a verified seller.',
-      seller: {
-        name: sellerProf.name || 'Verified Seller Store',
-        rating: totalSalesCount > 0 ? '5.0 (Verified)' : 'New Seller',
-        location: sellerProf.city ? `${sellerProf.city}, Pakistan` : 'Pakistan',
-        avatar: sellerProf.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'
-      },
-      isUserCreated: true
-    }));
+  // Filter for Buyer Marketplace: Listings are ONLY published if seller status is 'Verified' AND item is Approved/Active!
+  const isSellerVerified = currentSellerStatus === 'Verified';
+
+  const activeSellerProductsForBuyer = isSellerVerified
+    ? listings
+        .filter(item => item.status === 'Approved' || item.status === 'Active')
+        .map(item => ({
+          id: `seller-${item.id}`,
+          originalId: item.id,
+          title: item.title,
+          price: `PKR ${parseFloat(item.price).toLocaleString()}`,
+          numericPrice: parseFloat(item.price),
+          size: item.size ? `Size ${item.size}` : 'One Size',
+          image: item.image,
+          wishlisted: false,
+          category: item.category || 'Vintage',
+          condition: item.condition || 'Good',
+          sustainability: 'High',
+          description: item.description || 'Curated pre-loved thrift item from a verified seller.',
+          seller: {
+            name: sellerProf.name || 'Verified Seller Store',
+            rating: totalSalesCount > 0 ? '5.0 (Verified)' : 'New Seller',
+            location: sellerProf.city ? `${sellerProf.city}, Pakistan` : 'Pakistan',
+            avatar: sellerProf.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'
+          },
+          isUserCreated: true
+        }))
+    : [];
 
   const allMarketplaceProducts = [...activeSellerProductsForBuyer, ...browseProducts];
 

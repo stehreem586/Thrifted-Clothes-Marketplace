@@ -130,20 +130,9 @@ export default function Disputes() {
           <p className="page-sub">Monitor and resolve community reports to maintain platform integrity.</p>
         </div>
 
-        <div className="disputes-tabs">
-          {['All Reports', 'Disputes Only', 'System Flags', 'High Risk'].map(t => (
-            <button
-              key={t}
-              className={`disp-tab-btn ${activeTab === t ? 'active' : ''}`}
-              onClick={() => setActiveTab(t)}
-            >
-              {t}
-            </button>
-          ))}
-          <button className="outline-btn-icon" onClick={() => setShowAuditModal(true)}>
+        <button className="outline-btn-icon" onClick={() => setShowAuditModal(true)}>
             <History size={14} style={{ marginRight: '4px' }} /> Audit Log
           </button>
-        </div>
       </div>
 
       {/* Stat cards */}
@@ -194,6 +183,13 @@ export default function Disputes() {
         </div>
 
         <div className="disp-filter-group">
+          <select value={activeTab} onChange={e => setActiveTab(e.target.value)}>
+            <option value="All Reports">All Reports</option>
+            <option value="Disputes Only">Disputes Only</option>
+            <option value="System Flags">System Flags</option>
+            <option value="High Risk">High Risk</option>
+          </select>
+
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
             <option value="ALL">All Statuses</option>
             <option value="Pending">Pending</option>
@@ -204,9 +200,9 @@ export default function Disputes() {
 
           <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}>
             <option value="ALL">All Priorities</option>
-            <option value="High">🔴 High Priority</option>
-            <option value="Medium">🟠 Medium Priority</option>
-            <option value="Low">🟢 Low Priority</option>
+            <option value="High">High Priority</option>
+            <option value="Medium">Medium Priority</option>
+            <option value="Low">Low Priority</option>
           </select>
 
           <select value={sourceFilter} onChange={e => setSourceFilter(e.target.value)}>

@@ -24,57 +24,131 @@ export default function Sellers() {
     return [];
   });
 
-  // Hydrate real sellers from Supabase & active listings
+  // State for all database listings to accurately count listings per seller
+  const [allDbListings, setAllDbListings] = useState([]);
+
+  // Hydrate real sellers and listings from Supabase
   useEffect(() => {
     const fetchRealSellers = async () => {
       try {
-        const { data: dbProfiles, error } = await supabase
+        const adminRoles = ['admin', 'super_admin', 'moderator', 'supporter'];
+
+        const { data: profiles, error } = await supabase
           .from('profiles')
-          .select('*')
-          .or('role.eq.seller,role.eq.merchant');
+          .select('*');
 
-        const map = new Map();
+        const { data: dbListingsData } = await supabase
+          .from('listings')
+          .select('*');
 
-        // Add sellers from DB
-        if (!error && dbProfiles && dbProfiles.length > 0) {
-          dbProfiles.forEach(p => {
-            map.set(p.id, {
-              id: p.id,
-              name: p.name || p.email?.split('@')[0] || 'Seller Store',
-              email: p.email || 'seller@secondlife.com',
-              city: p.city ? `${p.city}, Pakistan` : 'Pakistan',
-              avatar: p.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80',
-              status: 'Verified',
-              bio: p.bio || 'No store bio description provided.'
-            });
-          });
+        if (dbListingsData) {
+          setAllDbListings(dbListingsData);
         }
 
-        // Add any users who have published listings
+        if (error || !profiles) return;
+
+        let allProfiles = profiles;
+
+        // Load local statuses override map
+        let localStatuses = {};
+        try {
+          const rawLocal = localStorage.getItem('secondlife_seller_statuses');
+          if (rawLocal) localStatuses = JSON.parse(rawLocal);
+        } catch (e) {}
+
+        // Extract all unique seller IDs from DB listings and Context listings
+        const listingSellerIds = new Set();
+        if (dbListingsData) {
+          dbListingsData.forEach(l => { if (l.seller_id) listingSellerIds.add(String(l.seller_id)); });
+        }
+        listings.forEach(l => { if (l.seller_id) listingSellerIds.add(String(l.seller_id)); });
+
+        // A profile is a SELLER if:
+        // - role === 'seller' (already verified before)
+        // - seller_status is set (explicitly marked)
+        // - has listings in DB (uploaded a listing)
+        // - status === 'pending' (uploaded first listing, profile update set this even if role didn't update due to RLS)
+        const sellerProfiles = allProfiles.filter(p => {
+          if (adminRoles.includes(p.role)) return false;
+          return (
+            p.role === 'seller' ||
+            (p.seller_status && p.seller_status.trim() !== '') ||
+            listingSellerIds.has(String(p.id)) ||
+            p.status === 'pending'   // ← catches new sellers even when role update fails
+          );
+        });
+
+        const map = new Map();
+        sellerProfiles.forEach(p => {
+          let resolvedStatus;
+
+          if (localStatuses[p.id]) {
+            // Admin override takes priority
+            resolvedStatus = localStatuses[p.id];
+          } else if (p.seller_status === 'Verified') {
+            resolvedStatus = 'Verified';
+          } else if (p.seller_status === 'Flagged' || p.seller_status === 'Suspended' || p.status === 'flagged' || p.status === 'banned' || p.status === 'suspended') {
+            resolvedStatus = 'Flagged';
+          } else if (p.seller_status === 'Pending' || p.status === 'pending') {
+            // New sellers: status=pending means they uploaded a listing and await verification
+            resolvedStatus = 'Pending';
+          } else if (p.role === 'seller') {
+            // Old verified seller with no explicit seller_status set
+            resolvedStatus = 'Verified';
+          } else {
+            resolvedStatus = 'Pending';
+          }
+
+          const sellerName = p.name || p.email?.split('@')[0] || 'Seller Store';
+          const realAvatar = p.avatar_url && p.avatar_url.trim() !== ''
+            ? p.avatar_url
+            : `https://ui-avatars.com/api/?name=${encodeURIComponent(sellerName)}&background=1a1a2e&color=fff&size=100`;
+
+          map.set(String(p.id), {
+            id: p.id,
+            name: sellerName,
+            email: p.email || 'seller@secondlife.com',
+            city: p.city ? `${p.city}, Pakistan` : 'Pakistan',
+            avatar: realAvatar,
+            status: resolvedStatus,
+            bio: p.bio || 'No store bio description provided.'
+          });
+        });
+
+        // Also include listing-based sellers not found in profiles table
         listings.forEach(l => {
-          const sId = l.seller_id || `seller-${l.id}`;
+          const sId = l.seller_id ? String(l.seller_id) : `seller-${l.id}`;
           if (!map.has(sId)) {
+            const resolvedStatus = localStatuses[sId] || 'Pending';
+            const sellerName = l.seller?.name || 'Seller Store';
+            const realAvatar = l.seller?.avatar && l.seller.avatar.trim() !== '' && !l.seller.avatar.includes('unsplash')
+              ? l.seller.avatar
+              : `https://ui-avatars.com/api/?name=${encodeURIComponent(sellerName)}&background=1a1a2e&color=fff&size=100`;
+
             map.set(sId, {
               id: sId,
-              name: l.seller?.name || 'Verified Seller',
+              name: sellerName,
               email: 'seller@secondlife.com',
               city: l.seller?.location || 'Pakistan',
-              avatar: l.seller?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80',
-              status: 'Verified',
+              avatar: realAvatar,
+              status: resolvedStatus,
               bio: 'No store bio description provided.'
             });
           }
         });
 
-        if (map.size > 0) {
-          setSellerList(Array.from(map.values()));
-        }
+        const list = Array.from(map.values());
+        setSellerList(list);
       } catch (err) {
         console.warn('Real sellers fetch notice:', err.message);
       }
     };
 
     fetchRealSellers();
+
+    const handleStatusUpdate = () => fetchRealSellers();
+    window.addEventListener('sellerStatusUpdated', handleStatusUpdate);
+    return () => window.removeEventListener('sellerStatusUpdated', handleStatusUpdate);
   }, [listings]);
 
   useEffect(() => {
@@ -83,14 +157,22 @@ export default function Sellers() {
     } catch (e) {}
   }, [sellerList]);
 
-  // Combine listings with seller records dynamically
+  // Combine listings from Supabase DB and ListingsContext dynamically for accurate total listing counts
   const sellersWithListings = sellerList.map(seller => {
-    const sellerListings = listings.filter(l =>
-      l.seller_id === seller.id ||
-      l.seller?.name?.toLowerCase() === seller.name.toLowerCase() ||
+    const matchedDbListings = allDbListings.filter(l => String(l.seller_id) === String(seller.id));
+    const matchedContextListings = listings.filter(l =>
+      String(l.seller_id) === String(seller.id) ||
+      (l.seller?.name && l.seller.name.toLowerCase() === seller.name.toLowerCase()) ||
       (seller.id === 's-2' && l.isUserCreated)
     );
-    const soldItems = sellerListings.filter(l => l.status === 'Sold');
+
+    // Merge and deduplicate by listing ID
+    const listingMap = new Map();
+    matchedDbListings.forEach(l => listingMap.set(String(l.id), l));
+    matchedContextListings.forEach(l => listingMap.set(String(l.id), l));
+    const sellerListings = Array.from(listingMap.values());
+
+    const soldItems = sellerListings.filter(l => l.status === 'Sold' || l.status === 'sold');
     const totalSalesNum = soldItems.reduce((sum, l) => sum + (parseFloat(l.price) || 0), 0);
 
     // Calculate rating dynamically based on listings reviews
@@ -115,7 +197,7 @@ export default function Sellers() {
       activeTab === 'All Sellers' ||
       (activeTab === 'Verified' && s.status === 'Verified') ||
       (activeTab === 'Pending'  && s.status === 'Pending')  ||
-      (activeTab === 'Flagged'  && s.status === 'Flagged');
+      (activeTab === 'Flagged'  && (s.status === 'Flagged' || s.status === 'Suspended'));
     const matchSearch =
       s.name.toLowerCase().includes(search.toLowerCase()) ||
       s.email.toLowerCase().includes(search.toLowerCase());
@@ -128,15 +210,64 @@ export default function Sellers() {
     setEditStatus(seller.status || 'Verified');
   };
 
-  // Action: Save Edited Seller Status
-  const handleSaveEditSubmit = (e) => {
+  // Action: Save Edited Seller Status Permanently to Supabase DB & Local Cache
+  const handleSaveEditSubmit = async (e) => {
     e.preventDefault();
     if (!editSeller) return;
 
-    setSellerList(prev => prev.map(s => s.id === editSeller.id ? {
-      ...s,
-      status: editStatus,
-    } : s));
+    const newStatus = editStatus;
+    const targetId = editSeller.id;
+
+    // 1. Update local state immediately
+    setSellerList(prev => prev.map(s => s.id === targetId ? { ...s, status: newStatus } : s));
+
+    // 2. Persist to localStorage for instant cross-tab fallback
+    try {
+      let localStatuses = {};
+      const rawLocal = localStorage.getItem('secondlife_seller_statuses');
+      if (rawLocal) localStatuses = JSON.parse(rawLocal);
+      localStatuses[targetId] = newStatus;
+      localStorage.setItem('secondlife_seller_statuses', JSON.stringify(localStatuses));
+    } catch (e) {}
+
+    // 3. Persist permanently to Supabase DB `profiles` table
+    try {
+      const dbStatusValue = newStatus === 'Flagged' ? 'flagged' : newStatus === 'Pending' ? 'pending' : 'active';
+      const dbRole = newStatus === 'Verified' ? 'seller' : 'seller';
+
+      // Primary update: update standard Supabase profiles columns (role, status)
+      const { error: primaryErr } = await supabase
+        .from('profiles')
+        .update({
+          role: dbRole,
+          status: dbStatusValue
+        })
+        .eq('id', targetId);
+
+      if (primaryErr) {
+        console.error('⚠️ Profile status update error:', primaryErr.message);
+      }
+
+      // Secondary update: update custom seller_status column (if column exists in schema)
+      try {
+        await supabase
+          .from('profiles')
+          .update({ seller_status: newStatus })
+          .eq('id', targetId);
+      } catch (_) {}
+    } catch (err) {
+      console.error('Supabase seller status update error:', err.message);
+    }
+
+    // 4. Notify ALL components — Inventory re-fetches and shows listings from this seller
+    window.dispatchEvent(new CustomEvent('sellerStatusUpdated', {
+      detail: { sellerId: targetId, status: newStatus }
+    }));
+
+    // 5. Also fire listingStatusUpdated so Inventory tab refreshes listing queue
+    window.dispatchEvent(new CustomEvent('listingStatusUpdated', {
+      detail: { sellerId: targetId, sellerStatus: newStatus }
+    }));
 
     setEditSeller(null);
   };

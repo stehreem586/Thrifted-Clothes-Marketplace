@@ -45,7 +45,8 @@ const teamRoleType = (role) => {
 
 const userStatusLabel = (u) => {
   if (u.status === 'banned')  return { label: 'BANNED',  type: 'banned' };
-  if (u.status === 'flagged') return { label: 'Flagged', type: 'flagged' };
+  if (u.status === 'flagged' || u.seller_status === 'Flagged' || u.seller_status === 'Suspended') return { label: 'Flagged / Suspended', type: 'flagged' };
+  if (u.seller_status === 'Pending' || u.status === 'pending') return { label: 'Pending Verification', type: 'reports' };
   const warns = u.warnings_count || 0;
   if (warns > 0) return { label: `${warns} Warning${warns > 1 ? 's' : ''}`, type: 'reports' };
   return { label: 'Active', type: 'clear' };
@@ -91,26 +92,65 @@ export default function Community() {
       const adminRoles = ['admin', 'super_admin', 'moderator', 'supporter'];
       let allProfiles = profiles || [];
 
-      // Auto-promote: find users with listings who aren't already sellers/admins
+      // Read local seller status overrides
+      let localStatuses = {};
+      try {
+        const rawLocal = localStorage.getItem('secondlife_seller_statuses');
+        if (rawLocal) localStatuses = JSON.parse(rawLocal);
+      } catch (e) {}
+
+      // Auto-promote: find users with listings and ensure their role is treated as seller
+      const listingSellerIds = new Set();
       try {
         const { data: listingRows } = await supabase
           .from('listings')
           .select('seller_id');
         if (listingRows && listingRows.length > 0) {
-          const sellerIds = [...new Set(listingRows.map(l => l.seller_id).filter(Boolean))];
-          const nonSellerIds = sellerIds.filter(id => {
+          listingRows.forEach(l => { if (l.seller_id) listingSellerIds.add(String(l.seller_id)); });
+
+          const nonSellerIds = Array.from(listingSellerIds).filter(id => {
             const prof = allProfiles.find(p => p.id === id);
             return prof && !adminRoles.includes(prof.role) && prof.role !== 'seller';
           });
           if (nonSellerIds.length > 0) {
-            await supabase.from('profiles').update({ role: 'seller' }).in('id', nonSellerIds);
-            // Update local state to reflect the new role
+            try {
+              await supabase.from('profiles').update({ role: 'seller' }).in('id', nonSellerIds);
+            } catch (_) {}
             allProfiles = allProfiles.map(p =>
               nonSellerIds.includes(p.id) ? { ...p, role: 'seller' } : p
             );
           }
         }
       } catch (_) {}
+
+      // Enrich profiles with seller_status
+      allProfiles = allProfiles.map(p => {
+        const isSeller = p.role === 'seller' || listingSellerIds.has(String(p.id)) || (p.seller_status && p.seller_status.trim() !== '');
+        const roleName = isSeller ? 'seller' : (p.role || 'customer');
+
+        let resolvedSellerStatus = null;
+        if (isSeller) {
+          if (localStatuses[p.id]) {
+            resolvedSellerStatus = localStatuses[p.id];
+          } else if (p.seller_status && p.seller_status.trim() !== '') {
+            resolvedSellerStatus = p.seller_status;
+          } else if (p.status === 'flagged' || p.status === 'suspended') {
+            resolvedSellerStatus = 'Flagged';
+          } else if (p.status === 'pending') {
+            resolvedSellerStatus = 'Pending';
+          } else if (p.role === 'seller' && (!p.seller_status || p.seller_status === 'Verified')) {
+            resolvedSellerStatus = 'Verified';
+          } else {
+            resolvedSellerStatus = 'Pending';
+          }
+        }
+
+        return {
+          ...p,
+          role: roleName,
+          seller_status: resolvedSellerStatus
+        };
+      });
 
       setAllUsers(allProfiles.filter(p => !adminRoles.includes(p.role)));
       setTeamList(allProfiles.filter(p =>  adminRoles.includes(p.role)));
@@ -127,7 +167,12 @@ export default function Community() {
     } catch (_) {}
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    fetchData();
+    const handleStatusUpdate = () => fetchData();
+    window.addEventListener('sellerStatusUpdated', handleStatusUpdate);
+    return () => window.removeEventListener('sellerStatusUpdated', handleStatusUpdate);
+  }, [fetchData]);
   // Reset visible count when filter/search changes
   useEffect(() => { setVisibleCount(PAGE_SIZE); }, [activeFilter, search]);
 
