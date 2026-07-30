@@ -5,6 +5,9 @@ import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../utils/supabaseClient.js';
 import { fetchSavedListingIds, toggleSavedListing } from '../../utils/savedFetch.js';
 import { useListings } from '../../context/ListingsContext';
+import { browseProducts, similarProducts } from '../../data/browseProducts';
+import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
+import { db } from '../../Firebase/Firebase';
 import ReportModal from '../../components/common/ReportModal';
 import { ShieldAlert } from 'lucide-react';
 import './Product.css';
@@ -12,12 +15,15 @@ import './Product.css';
 const Product = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { allMarketplaceProducts } = useListings();
+  const { user, profile } = useAuth();
   const productId = parseInt(id);
 
   // Find product from either browse list or similar items list
   const currentProduct = 
-    browseProducts.find(p => p.id === productId) || 
-    similarProducts.find(p => p.id === productId) || 
+    allMarketplaceProducts.find(p => String(p.id) === String(id)) || 
+    similarProducts.find(p => String(p.id) === String(id)) || 
+    allMarketplaceProducts.find(p => String(p.id) === '4') ||
     browseProducts.find(p => p.id === 4); // default to Archival Camel Wool Overcoat if not found
 
   const sellerInfo = currentProduct.seller || {
@@ -73,12 +79,76 @@ const Product = () => {
     }, 2500);
   };
 
-  const handleChatClick = () => {
-    navigate('/chat', { state: { startChatWith: sellerInfo.name } });
-    const sellerSlug = currentProduct.seller?.name ? 
-      currentProduct.seller.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '') : 'vintage-vibes';
-    const targetSlug = sellerSlug.includes('elena') ? 'elena-archive' : sellerSlug;
-    navigate(`/seller-profile/${targetSlug}`);
+  const handleChatClick = async () => {
+    if (!user) {
+      if (window.confirm("You must be logged in to chat with the seller. Would you like to log in now?")) {
+        navigate('/login', { state: { from: `/product/${id}` } });
+      }
+      return;
+    }
+
+    try {
+      const getSellerId = (product) => {
+        if (product.seller?.id) return product.seller.id;
+        if (product.seller?.name) {
+          return 'mock-seller-' + product.seller.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
+        }
+        return 'mock-seller-unknown';
+      };
+
+      const buyerId = user.id;
+      const sellerId = getSellerId(currentProduct);
+      const listingId = String(currentProduct.id);
+
+      // Check Firestore for existing chat: WHERE listing_id = X AND participants includes current user
+      const chatsRef = collection(db, 'chats');
+      const q = query(
+        chatsRef,
+        where('listing_id', '==', listingId),
+        where('participants', 'array-contains', buyerId)
+      );
+
+      const querySnapshot = await getDocs(q);
+      let chatId = null;
+
+      // Filter on the client side to verify participants includes the seller
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (data.participants && data.participants.includes(sellerId)) {
+          chatId = docSnap.id;
+        }
+      });
+
+      if (!chatId) {
+        // If no chat exists: create new document in chats collection
+        const newChat = {
+          participants: [buyerId, sellerId],
+          listing_id: listingId,
+          created_at: new Date().toISOString(),
+          buyer_id: buyerId,
+          buyer_name: profile?.name || user.email?.split('@')[0] || 'Interested Buyer',
+          buyer_avatar: profile?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80',
+          seller_id: sellerId,
+          seller_name: currentProduct.seller?.name || 'Seller',
+          seller_avatar: sellerInfo.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80',
+          product_title: currentProduct.title,
+          product_price: currentProduct.price,
+          product_image: currentProduct.image,
+          product_category: currentProduct.category || 'Vintage',
+          last_message: '',
+          last_message_time: new Date().toISOString()
+        };
+
+        const docRef = await addDoc(chatsRef, newChat);
+        chatId = docRef.id;
+      }
+
+      // Immediately open the chat conversation screen
+      navigate('/chat', { state: { activeChatId: chatId } });
+    } catch (error) {
+      console.error("Error starting chat:", error);
+      alert("Failed to start chat. Please try again.");
+    }
   };
 
   const handleBuyNow = () => {

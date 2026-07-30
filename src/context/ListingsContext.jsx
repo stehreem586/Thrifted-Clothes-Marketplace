@@ -523,7 +523,7 @@ export const ListingsProvider = ({ children }) => {
   const currentSellerStatus = getCurrentSellerStatus();
   const totalSalesCount = listings.filter(i => i.status === 'Sold').length + orders.length;
 
-  // Filter for Buyer Marketplace: Listings are ONLY published if seller status is 'Verified' AND item is Approved/Active!
+// Filter for Buyer Marketplace: Listings are ONLY published if seller status is 'Verified' AND item is Approved/Active!
   const isSellerVerified = currentSellerStatus === 'Verified';
 
   const activeSellerProductsForBuyer = isSellerVerified
@@ -543,6 +543,7 @@ export const ListingsProvider = ({ children }) => {
           sustainability: 'High',
           description: item.description || 'Curated pre-loved thrift item from a verified seller.',
           seller: {
+            id: item.seller_id || userId,
             name: sellerProf.name || 'Verified Seller Store',
             rating: totalSalesCount > 0 ? '5.0 (Verified)' : 'New Seller',
             location: sellerProf.city ? `${sellerProf.city}, Pakistan` : 'Pakistan',
@@ -551,6 +552,8 @@ export const ListingsProvider = ({ children }) => {
           isUserCreated: true
         }))
     : [];
+
+  const allMarketplaceProducts = [...activeSellerProductsForBuyer, ...browseProducts];
 
   const allMarketplaceProducts = [...activeSellerProductsForBuyer, ...browseProducts];
 

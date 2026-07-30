@@ -22,6 +22,9 @@ import ProtectedRoute from './components/common/ProtectedRoute';
 import { useAuth } from './context/AuthContext';
 import { ModerationProvider } from './context/ModerationContext';
 
+import { requestNotificationPermission } from './utils/pushNotifications';
+
+
 // Admin layout + pages
 import AdminLayout from './pages/Admin/AdminLayout';
 import AdminDashboard from './pages/Admin/AdminDashboard';
@@ -38,6 +41,11 @@ import './App.css';
 
 function MainLayout() {
   const { user, profile, loading, userMode } = useAuth();
+
+  useEffect(() => {
+    if (user) requestNotificationPermission();
+  }, [user]);
+
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: '#faf9f6' }}>
