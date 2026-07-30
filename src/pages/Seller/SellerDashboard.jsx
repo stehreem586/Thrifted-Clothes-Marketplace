@@ -1,11 +1,27 @@
 import React, { useState, useMemo } from 'react';
 import { useListings } from '../../context/ListingsContext';
+import { useAuth } from '../../context/AuthContext';
 import './SellerDashboard.css';
 
 function SellerDashboard({ dashboardSearch }) {
   const { listings, orders } = useListings();
+  const { profile, user } = useAuth();
   const [dateFilter, setDateFilter] = useState('All Time'); // 'Today' | 'Last 7 Days' | 'This Month' | 'All Time'
   const [chartView, setChartView] = useState('Weekly'); // 'Weekly' | 'Monthly'
+
+  // Resolve current seller verification status dynamically
+  const getSellerStatus = () => {
+    try {
+      const raw = localStorage.getItem('secondlife_seller_statuses');
+      if (raw && user?.id) {
+        const map = JSON.parse(raw);
+        if (map[user.id]) return map[user.id];
+      }
+    } catch(e) {}
+    return profile?.seller_status || (profile?.status === 'flagged' || profile?.status === 'suspended' ? 'Suspended' : profile?.status === 'pending' ? 'Pending' : 'Verified');
+  };
+
+  const currentSellerStatus = getSellerStatus();
 
   // Date filtering logic with previous period comparison
   const filteredData = useMemo(() => {
@@ -205,6 +221,31 @@ function SellerDashboard({ dashboardSearch }) {
           </select>
         </div>
       </div>
+
+      {/* Dynamic Seller Status Alert Banner */}
+      {currentSellerStatus === 'Pending' && (
+        <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', padding: '16px 20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '14px', color: '#92400e' }}>
+          <span style={{ fontSize: '24px' }}>⏳</span>
+          <div>
+            <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#b45309' }}>Seller Verification Pending Admin Approval</h4>
+            <p style={{ margin: '4px 0 0 0', fontSize: '13px', lineHeight: '1.4', color: '#78350f' }}>
+              Your store verification request is under review by Admin. You can upload and edit listings, but they will remain unlisted on the public marketplace until your seller status is verified.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {(currentSellerStatus === 'Suspended' || currentSellerStatus === 'Flagged') && (
+        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '16px 20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '14px', color: '#991b1b' }}>
+          <span style={{ fontSize: '24px' }}>🚫</span>
+          <div>
+            <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#dc2626' }}>Seller Account Suspended / Flagged</h4>
+            <p style={{ margin: '4px 0 0 0', fontSize: '13px', lineHeight: '1.4', color: '#7f1d1d' }}>
+              Your seller account status has been changed to Suspended/Flagged by Admin. Your products have been unlisted from the public marketplace. Please contact support.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Performance Stats Cards (Shows ONLY Percentage tag; Hidden for All Time) */}
       <div className="stats-grid">

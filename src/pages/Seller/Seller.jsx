@@ -1,15 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import { useListings } from '../../context/ListingsContext';
 import './Seller.css';
 import SellerDashboard from './SellerDashboard';
 import Inventory from './Inventory';
 import OrderHistory from './OrderHistory';
 import SellerProfile from './SellerProfile';
+import SellerReviews from './SellerReviews';
 
 function Seller() {
   const { switchMode, user, profile } = useAuth();
+  const { isDarkMode, toggleTheme } = useTheme();
   const { notifications, conversations, setConversations, sendSellerReply, markNotificationRead, markAllNotificationsRead } = useListings();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('inventory');
@@ -155,6 +158,9 @@ function Seller() {
             { key: 'profile', label: 'Store Profile', icon: (
               <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>
             )},
+            { key: 'reviews', label: 'Reviews', icon: (
+              <><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></>
+            )},
             { key: 'sales', label: 'Sales', icon: (
               <><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></>
             )},
@@ -220,9 +226,29 @@ function Seller() {
           <div className="header-actions">
             <div className="header-nav-shortcuts">
               <Link to="/" className="shortcut-link" onClick={() => switchMode('buyer')}>Marketplace</Link>
-              <a href="/sell" className="shortcut-link active">Sell</a>
-              <a href="/collections" className="shortcut-link">Collections</a>
+              <button className="shortcut-link active" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>Sell</button>
             </div>
+
+            {/* Dark Mode Toggle */}
+            <button className="icon-btn theme-btn" onClick={toggleTheme} title="Toggle Dark/Light Mode" aria-label="Toggle theme">
+              {isDarkMode ? (
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="5"></circle>
+                  <line x1="12" y1="1" x2="12" y2="3"></line>
+                  <line x1="12" y1="21" x2="12" y2="23"></line>
+                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                  <line x1="1" y1="12" x2="3" y2="12"></line>
+                  <line x1="21" y1="12" x2="23" y2="12"></line>
+                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+              )}
+            </button>
             <button
               className="icon-btn notification-btn"
               onClick={() => setShowNotifModal(true)}
@@ -335,6 +361,10 @@ function Seller() {
 
         {activeTab === 'profile' && (
           <SellerProfile />
+        )}
+
+        {activeTab === 'reviews' && (
+          <SellerReviews />
         )}
 
         {['sales', 'messages', 'community'].includes(activeTab) && (

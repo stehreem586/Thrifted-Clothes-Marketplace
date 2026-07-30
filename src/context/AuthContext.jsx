@@ -91,11 +91,14 @@ export const AuthProvider = ({ children }) => {
         if (localProfStr) {
           try {
             const localProf = JSON.parse(localProfStr);
-            prof = { ...(prof || {}), ...localProf };
+            // NEVER let localStorage override the role from DB — DB is source of truth
+            const { role: _ignored, ...localProfWithoutRole } = localProf;
+            prof = { ...(prof || {}), ...localProfWithoutRole };
           } catch(e) {}
         }
         setProfile(prof);
-        if (prof) localStorage.setItem('userRole', prof.role);
+        // Always persist the real DB role to localStorage
+        if (prof?.role) localStorage.setItem('userRole', prof.role);
 
         // Stay-signed-in logic
         const staySignedIn = localStorage.getItem('staySignedIn');
@@ -144,11 +147,24 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (email, password, staySignedIn = true) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    localStorage.setItem('staySignedIn', String(staySignedIn));
-    sessionStorage.setItem('sessionAlive', 'true');
-    return data;
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      localStorage.setItem('staySignedIn', String(staySignedIn));
+      sessionStorage.setItem('sessionAlive', 'true');
+      
+      setUser(data.user);
+      const prof = await fetchProfile(data.user.id);
+      setProfile(prof);
+      if (prof) localStorage.setItem('userRole', prof.role);
+
+      setLoading(false);
+      return data;
+    } catch (err) {
+      setLoading(false);
+      throw err;
+    }
   };
 
   const loginWithGoogle = async () => {

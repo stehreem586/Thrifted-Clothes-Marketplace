@@ -8,6 +8,8 @@ import { useListings } from '../../context/ListingsContext';
 import { browseProducts, similarProducts } from '../../data/browseProducts';
 import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
 import { db } from '../../Firebase/Firebase';
+import ReportModal from '../../components/common/ReportModal';
+import { ShieldAlert } from 'lucide-react';
 import './Product.css';
 
 const Product = () => {
@@ -38,8 +40,19 @@ const Product = () => {
     { id: 4, name: 'Hem Detail', transform: 'scale(1.6)', transformOrigin: 'center 85%' }
   ];
 
+  // Gallery state (tehreem) — this is what the thumbnails/main image below actually use
   const [activeThumbnail, setActiveThumbnail] = useState(productThumbnails[0]);
+
+  // Saved-listings + wishlist state (main), synced from product data (tehreem)
+  const [savedListingIds, setSavedListingIds] = useState([]);
   const [wishlisted, setWishlisted] = useState(currentProduct.wishlisted);
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  // Contact / report modal state (main)
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [buyerMsgInput, setBuyerMsgInput] = useState('');
+
   const [toastMessage, setToastMessage] = useState('');
 
   // Reset local states when product ID changes
@@ -296,13 +309,49 @@ const Product = () => {
               </svg>
               <span>Chat with Seller</span>
             </button>
+
             <button type="button" className="btn-buy-now" onClick={handleBuyNow}>
               Buy Now
             </button>
+
+            <button
+              type="button"
+              className="save-btn"
+              onClick={() => setShowReportModal(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '48px',
+                height: '48px',
+                borderRadius: '8px',
+                border: '1px solid #fee2e2',
+                backgroundColor: '#fff5f5',
+                cursor: 'pointer',
+                color: '#dc2626',
+                transition: 'all 0.2s',
+                padding: 0
+              }}
+              title="Report Listing"
+              aria-label="Report Listing"
+            >
+              <ShieldAlert size={20} />
+            </button>
           </div>
 
+          {/* Report Modal */}
+          {currentProduct && (
+            <ReportModal
+              isOpen={showReportModal}
+              onClose={() => setShowReportModal(false)}
+              targetType="Listing"
+              targetListing={currentProduct}
+              targetUser={currentProduct.seller}
+            />
+          )}
+
           {/* Description Section */}
-          <div className="detail-description-section">
+          <div className="detail-description-section" style={{ marginTop: '32px' }}>
             <h3 className="description-section-title">Description</h3>
             <p className="description-body-text">{descriptionLabel}</p>
           </div>
