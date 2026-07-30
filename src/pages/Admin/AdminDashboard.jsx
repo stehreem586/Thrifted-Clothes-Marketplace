@@ -8,6 +8,7 @@ export default function AdminDashboard() {
   const { listings, orders } = useListings();
   const [period, setPeriod] = useState('Last 30 Days');
   const [userProfiles, setUserProfiles] = useState([]);
+  const [sellerProfiles, setSellerProfiles] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [tooltip, setTooltip] = useState(null); // { idx, x, y }
   const dropdownRef = useRef(null);
@@ -25,19 +26,61 @@ export default function AdminDashboard() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Fetch real registered user profiles from Supabase
+  // Fetch real registered user profiles from Supabase — same logic as Community.jsx
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const { data, error } = await supabase
+        const adminRoles = ['admin', 'super_admin', 'moderator', 'supporter'];
+        const { data: profiles, error } = await supabase
           .from('profiles')
-          .select('id, role, created_at');
-        if (!error && data) {
-          setUserProfiles(data);
-        }
+          .select('*');
+        if (error || !profiles) return;
+
+        let allProfiles = profiles;
+
+        // Read local seller status overrides
+        let localStatuses = {};
+        try {
+          const rawLocal = localStorage.getItem('secondlife_seller_statuses');
+          if (rawLocal) localStatuses = JSON.parse(rawLocal);
+        } catch (e) {}
+
+        // Auto-promote: same as Community.jsx — users with listings become sellers
+        try {
+          const { data: listingRows } = await supabase.from('listings').select('seller_id');
+          if (listingRows && listingRows.length > 0) {
+            const sellerIds = [...new Set(listingRows.map(l => l.seller_id).filter(Boolean))];
+            const nonSellerIds = sellerIds.filter(id => {
+              const prof = allProfiles.find(p => p.id === id);
+              return prof && !adminRoles.includes(prof.role) && prof.role !== 'seller';
+            });
+            if (nonSellerIds.length > 0) {
+              await supabase.from('profiles').update({ role: 'seller' }).in('id', nonSellerIds);
+              allProfiles = allProfiles.map(p =>
+                nonSellerIds.includes(p.id) ? { ...p, role: 'seller' } : p
+              );
+            }
+          }
+        } catch (_) {}
+
+        setUserProfiles(allProfiles);
+
+        // Count ONLY verified active sellers
+        const verifiedSellers = allProfiles.filter(p => {
+          if (adminRoles.includes(p.role) || p.role !== 'seller') return false;
+          const status = localStatuses[p.id] || p.seller_status || (p.status === 'flagged' || p.status === 'suspended' ? 'Flagged' : p.status === 'pending' ? 'Pending' : 'Verified');
+          return status === 'Verified';
+        });
+
+        setSellerProfiles(verifiedSellers);
       } catch (err) {}
     };
+
     fetchUsers();
+
+    const handleStatusUpdate = () => fetchUsers();
+    window.addEventListener('sellerStatusUpdated', handleStatusUpdate);
+    return () => window.removeEventListener('sellerStatusUpdated', handleStatusUpdate);
   }, [listings]);
 
   // Date filtering helper
@@ -80,9 +123,8 @@ export default function AdminDashboard() {
   const gmvFromOrders = filteredOrders.reduce((sum, o) => sum + (parseFloat(o.total || o.price) || 0), 0);
   const totalGMV = gmvFromListings + gmvFromOrders;
 
-  // Active Sellers count
-  const activeSellersSet = new Set(filteredListings.map(l => l.seller_id || l.seller?.name || 'Seller'));
-  const activeSellersCount = filteredListings.length > 0 ? Math.max(1, activeSellersSet.size) : 0;
+  // Active Sellers count — real from Supabase profiles
+  const activeSellersCount = sellerProfiles.length;
 
   // Listings snapshot
   const activeCount  = filteredListings.filter(l => l.status === 'Approved' || l.status === 'Active').length;
