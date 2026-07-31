@@ -21,9 +21,7 @@ import SellerPublicProfile from './pages/SellerPublicProfile/SellerPublicProfile
 import ProtectedRoute from './components/common/ProtectedRoute';
 import { useAuth } from './context/AuthContext';
 import { ModerationProvider } from './context/ModerationContext';
-
-import { requestNotificationPermission } from './utils/pushNotifications';
-
+import { requestNotificationPermission, listenForForegroundMessages } from './utils/pushNotifications';
 
 // Admin layout + pages
 import AdminLayout from './pages/Admin/AdminLayout';
@@ -43,7 +41,10 @@ function MainLayout() {
   const { user, profile, loading, userMode } = useAuth();
 
   useEffect(() => {
-    if (user) requestNotificationPermission();
+    if (!user) return;
+    requestNotificationPermission(user.id);
+    const unsubscribe = listenForForegroundMessages();
+    return unsubscribe;
   }, [user]);
 
   if (loading) {

@@ -75,7 +75,7 @@ export const ModerationProvider = ({ children }) => {
     } catch(e) {}
   }, []);
 
-  const [auditLog, setAuditLog] = useState(() => {
+  
 
   const [auditLog, setAuditLog] = useState(() => {
     const saved = localStorage.getItem('secondlife_moderation_audit_log');

@@ -8,6 +8,7 @@ import ReportModal from '../../components/common/ReportModal';
 import { useModeration } from '../../context/ModerationContext';
 import { useAuth } from '../../context/AuthContext';
 import { useChat } from '../../hooks/useChat';
+import { blockUser, unblockUser } from '../../utils/blockService';
 import './Chat.css';
 
 const Chat = () => {
@@ -23,9 +24,12 @@ const Chat = () => {
     sendMessage,
     loadMoreMessages,
     startChatWithSeller,
+    activeIsBlocked,
   } = useChat();
 
-  // Deep-link support: /chat?sellerId=...&listingId=... opens/creates that chat
+  // Deep-link support: /chat?sellerId=...&listingId=... opens/creates that chat.
+  // Must be logged in to start a chat — this route is already behind
+  // ProtectedRoute, so a guest is redirected to login before reaching here.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const sellerId = params.get('sellerId');
@@ -56,6 +60,20 @@ const Chat = () => {
     alert(`Offer made on ${activeConversation.product.title}!`);
   };
 
+  const handleBlockToggle = async () => {
+    if (!user || !activeConversation?.otherUserId) return;
+    if (activeIsBlocked) {
+      await unblockUser({ blockerId: user.id, blockedId: activeConversation.otherUserId });
+    } else {
+      const confirmed = window.confirm(
+        `Block ${activeConversation.user.name}? They will no longer be able to message you.`
+      );
+      if (!confirmed) return;
+      await blockUser({ blockerId: user.id, blockedId: activeConversation.otherUserId });
+      alert('You have blocked this user. They can no longer message you.');
+    }
+  };
+
   return (
     <div className="chat-page-wrapper">
       {activeConversation && (
@@ -82,7 +100,7 @@ const Chat = () => {
                 onCall={() => alert('Voice call feature is coming soon!')}
                 onVideo={() => alert('Video call feature is coming soon!')}
                 onReport={() => setShowReportModal(true)}
-                onMore={() => setShowReportModal(true)}
+                onMore={handleBlockToggle}
               />
               <ProductCard
                 product={activeConversation.product}
@@ -93,7 +111,13 @@ const Chat = () => {
                 showTyping={false}
                 onScrollTop={loadMoreMessages}
               />
-              <ChatInput onSendMessage={handleSendMessage} />
+              {activeIsBlocked ? (
+                <div style={{ padding: '16px', textAlign: 'center', color: '#888', fontSize: '14px' }}>
+                  You can't message this user right now.
+                </div>
+              ) : (
+                <ChatInput onSendMessage={handleSendMessage} />
+              )}
             </>
           ) : (
             <div className="no-chat-selected">
