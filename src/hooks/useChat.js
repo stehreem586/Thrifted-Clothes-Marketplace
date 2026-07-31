@@ -1,20 +1,44 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import * as chatService from '../utils/chatService';
-import { notifyNewMessage } from '../utils/pushNotifications';
+import { isBlocked as checkIsBlocked } from '../utils/blockService';
+import { supabase } from '../utils/supabaseClient';
 
 const FALLBACK_AVATAR = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80';
 
-const formatTime = (iso) =>
-  new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+const formatTime = (ts) => {
+  const date = ts?.toDate ? ts.toDate() : new Date();
+  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+};
 
 const toUiMessage = (row, currentUserId) => ({
   id: row.id,
   text: row.text,
-  time: formatTime(row.created_at),
-  rawCreatedAt: row.created_at,
+  time: formatTime(row.timestamp),
   sender: row.sender_id === currentUserId ? 'me' : 'them',
+  _snap: row._snap,
 });
+
+async function attachOtherUserProfile(chat, currentUserId) {
+  const otherId = chat.participants.find((id) => id !== currentUserId);
+  let otherUser = null;
+  let listing = null;
+
+  if (otherId) {
+    const { data } = await supabase.from('profiles').select('id, name, avatar_url').eq('id', otherId).maybeSingle();
+    otherUser = data;
+  }
+  if (chat.listing_id) {
+    const { data } = await supabase
+      .from('listings')
+      .select('id, title, brand, price, image_url')
+      .eq('id', chat.listing_id)
+      .maybeSingle();
+    listing = data;
+  }
+
+  return { ...chat, otherUser, listing, otherId };
+}
 
 const toUiConversation = (chat, currentUserId, previousMessages = []) => ({
   id: chat.id,
@@ -23,9 +47,9 @@ const toUiConversation = (chat, currentUserId, previousMessages = []) => ({
     avatar: chat.otherUser?.avatar_url || FALLBACK_AVATAR,
     online: false,
   },
-  lastMessageText: chat.last_message_text || 'Say hello 👋',
+  lastMessageText: chat.last_message || 'Say hello 👋',
   lastMessageTime: chat.last_message_at ? formatTime(chat.last_message_at) : '',
-  unreadCount: 0,
+  unreadCount: chat.unreadCounts?.[currentUserId] || 0,
   product: chat.listing
     ? {
         brand: chat.listing.brand || '',
@@ -37,17 +61,18 @@ const toUiConversation = (chat, currentUserId, previousMessages = []) => ({
   messages: previousMessages,
   buyer_id: chat.buyer_id,
   seller_id: chat.seller_id,
+  otherUserId: chat.otherId,
 });
 
 /**
- * Drop-in replacement for the old hardcoded `initialConversations` state in
- * Chat.jsx. Returns the exact same shape the existing UI components expect,
- * backed by real Supabase Realtime data instead of mock objects.
+ * Real-time chat backed by Firebase Firestore. Returns the same shape the
+ * Chat UI already expects, so no component markup changes.
  */
 export function useChat() {
   const { user } = useAuth();
   const [conversations, setConversations] = useState([]);
   const [activeConversationId, setActiveConversationId] = useState(null);
+  const [activeIsBlocked, setActiveIsBlocked] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
 
@@ -55,31 +80,30 @@ export function useChat() {
   const conversationsRef = useRef(conversations);
   useEffect(() => { conversationsRef.current = conversations; }, [conversations]);
 
-  // Load the chat list and keep it live
+  // Live chat list
   useEffect(() => {
     if (!user) return;
-    let cancelled = false;
 
-    const loadChats = async () => {
-      const chats = await chatService.fetchUserChats(user.id);
-      if (cancelled) return;
-      setConversations((prev) => {
-        const prevMessagesById = new Map(prev.map((c) => [c.id, c.messages]));
-        return chats.map((c) => toUiConversation(c, user.id, prevMessagesById.get(c.id) || []));
-      });
-      setActiveConversationId((prevId) => prevId ?? (chats[0]?.id || null));
-    };
+    const unsub = chatService.subscribeToUserChats(user.id, async (rawChats) => {
+      const prevMessagesById = new Map(conversationsRef.current.map((c) => [c.id, c.messages]));
+      const enriched = await Promise.all(rawChats.map((c) => attachOtherUserProfile(c, user.id)));
+      setConversations(enriched.map((c) => toUiConversation(c, user.id, prevMessagesById.get(c.id) || [])));
+      setActiveConversationId((prevId) => prevId ?? (enriched[0]?.id || null));
+    });
 
-    loadChats();
-    const unsub = chatService.subscribeToUserChats(user.id, loadChats);
-
-    return () => { cancelled = true; unsub(); };
+    return unsub;
   }, [user]);
 
-  // Load messages + realtime subscription for whichever chat is open
+  // Messages + realtime subscription for the open chat
   useEffect(() => {
     if (!activeConversationId || !user) return;
     messageUnsubRef.current?.();
+    chatService.markChatRead(activeConversationId, user.id).catch(() => {});
+
+    const activeConv = conversationsRef.current.find((c) => c.id === activeConversationId);
+    if (activeConv?.otherUserId) {
+      checkIsBlocked({ userId: user.id, otherId: activeConv.otherUserId }).then(setActiveIsBlocked);
+    }
 
     chatService.fetchMessages(activeConversationId).then((rows) => {
       setConversations((prev) =>
@@ -90,7 +114,7 @@ export function useChat() {
       setHasMore(rows.length >= 50);
     });
 
-    messageUnsubRef.current = chatService.subscribeToMessages(activeConversationId, (row) => {
+    messageUnsubRef.current = chatService.subscribeToNewMessages(activeConversationId, (row) => {
       setConversations((prev) =>
         prev.map((c) => {
           if (c.id !== activeConversationId) return c;
@@ -98,15 +122,8 @@ export function useChat() {
           return { ...c, messages: [...c.messages, toUiMessage(row, user.id)] };
         })
       );
-
       if (row.sender_id !== user.id) {
-        const conv = conversationsRef.current.find((c) => c.id === activeConversationId);
-        notifyNewMessage({
-          senderName: conv?.user?.name || 'New message',
-          text: row.text,
-          chatId: activeConversationId,
-          isTabHidden: document.hidden,
-        });
+        chatService.markChatRead(activeConversationId, user.id).catch(() => {});
       }
     });
 
@@ -120,9 +137,9 @@ export function useChat() {
     setLoadingMore(true);
     try {
       const older = await chatService.fetchMessages(activeConversationId, {
-        before: conv.messages[0].rawCreatedAt,
+        before: conv.messages[0]._snap,
       });
-      if (older.length < 50) setHasMore(false);
+      setHasMore(older.length >= 50);
       setConversations((prev) =>
         prev.map((c) =>
           c.id === activeConversationId
@@ -136,16 +153,21 @@ export function useChat() {
   }, [activeConversationId, loadingMore, hasMore, user]);
 
   const sendMessage = useCallback(async (text) => {
-    if (!activeConversationId || !user) return;
-    await chatService.sendMessage({ chatId: activeConversationId, senderId: user.id, text });
-  }, [activeConversationId, user]);
+    if (!activeConversationId || !user || activeIsBlocked) return;
+    const conv = conversationsRef.current.find((c) => c.id === activeConversationId);
+    if (!conv?.otherUserId) return;
+    await chatService.sendMessage({
+      chatId: activeConversationId,
+      senderId: user.id,
+      recipientId: conv.otherUserId,
+      text,
+    });
+  }, [activeConversationId, user, activeIsBlocked]);
 
   const startChatWithSeller = useCallback(async (sellerId, listingId = null) => {
     if (!user) return;
     const chat = await chatService.getOrCreateChat({ buyerId: user.id, sellerId, listingId });
     setActiveConversationId(chat.id);
-    const chats = await chatService.fetchUserChats(user.id);
-    setConversations(chats.map((c) => toUiConversation(c, user.id)));
   }, [user]);
 
   const activeConversation = conversations.find((c) => c.id === activeConversationId) || null;
@@ -159,5 +181,6 @@ export function useChat() {
     loadMoreMessages,
     hasMore,
     startChatWithSeller,
+    activeIsBlocked,
   };
 }

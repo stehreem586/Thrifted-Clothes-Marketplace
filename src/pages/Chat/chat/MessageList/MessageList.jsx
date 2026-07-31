@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import MessageBubble from '../MessageBubble/MessageBubble';
 import MessageTime from '../MessageTime/MessageTime';
 import TypingIndicator from '../TypingIndicator/TypingIndicator';
-import './MessageList.css';
+
 
 const MessageList = ({ messages, showTyping, onScrollTop }) => {
   const bottomRef = useRef(null);

@@ -553,7 +553,7 @@ export const ListingsProvider = ({ children }) => {
         }))
     : [];
 
-  const allMarketplaceProducts = [...activeSellerProductsForBuyer, ...browseProducts];
+  
 
   const allMarketplaceProducts = [...activeSellerProductsForBuyer, ...browseProducts];
 
