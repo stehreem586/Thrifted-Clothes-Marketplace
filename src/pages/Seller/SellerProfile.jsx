@@ -31,6 +31,28 @@ function SellerProfile() {
   const totalReviews = orders.filter(o => o.reviewed || o.status === 'Delivered').length;
   const avgRating = totalReviews > 0 ? 5.0 : 0;
 
+  // ── Seller status lookup ──
+  let sellerStatus = 'Pending';
+  try {
+    const rawLocal = localStorage.getItem('secondlife_seller_statuses');
+    if (rawLocal && user?.id) {
+      const localStatuses = JSON.parse(rawLocal);
+      if (localStatuses[user.id]) {
+        sellerStatus = localStatuses[user.id];
+      } else if (profile?.role === 'seller' && profile?.status === 'active') {
+        sellerStatus = 'Verified';
+      } else if (profile?.status === 'pending') {
+        sellerStatus = 'Pending';
+      }
+    } else {
+      if (profile?.role === 'seller' && profile?.status === 'active') {
+        sellerStatus = 'Verified';
+      } else if (profile?.status === 'pending') {
+        sellerStatus = 'Pending';
+      }
+    }
+  } catch (e) {}
+
   // ── Populate fields from Supabase profile or user-scoped localStorage ──
   useEffect(() => {
     const uid = user?.id;

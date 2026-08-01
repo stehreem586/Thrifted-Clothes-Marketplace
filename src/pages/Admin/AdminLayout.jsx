@@ -202,7 +202,7 @@ export default function AdminLayout() {
             </button>
 
             {/* Admin Avatar */}
-            <div onClick={() => navigate('/admin/settings')} style={{ cursor: 'pointer' }}>
+            <div onClick={() => navigate('/admin')} style={{ cursor: 'pointer' }}>
               {renderAvatar()}
             </div>
           </div>
