@@ -5,10 +5,11 @@ import { supabase } from '../../utils/supabaseClient';
 import './AdminDashboard.css';
 
 export default function AdminDashboard() {
-  const { listings, orders } = useListings();
   const [period, setPeriod] = useState('Last 30 Days');
   const [userProfiles, setUserProfiles] = useState([]);
   const [sellerProfiles, setSellerProfiles] = useState([]);
+  const [allDbListings, setAllDbListings] = useState([]);
+  const [allDbOrders, setAllDbOrders] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [tooltip, setTooltip] = useState(null); // { idx, x, y }
   const dropdownRef = useRef(null);
@@ -26,16 +27,24 @@ export default function AdminDashboard() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Fetch real registered user profiles from Supabase — same logic as Community.jsx
+  // Fetch real registered user profiles, listings, and orders directly from Supabase
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchDashboardData = async () => {
       try {
         const adminRoles = ['admin', 'super_admin', 'moderator', 'supporter'];
-        const { data: profiles, error } = await supabase
-          .from('profiles')
-          .select('*');
-        if (error || !profiles) return;
 
+        // 1. Fetch Profiles
+        const { data: profiles, error: profErr } = await supabase.from('profiles').select('*');
+        
+        // 2. Fetch Listings
+        const { data: listingsData } = await supabase.from('listings').select('*');
+        if (listingsData) setAllDbListings(listingsData);
+
+        // 3. Fetch Orders
+        const { data: ordersData } = await supabase.from('orders').select('*');
+        if (ordersData) setAllDbOrders(ordersData);
+
+        if (profErr || !profiles) return;
         let allProfiles = profiles;
 
         // Read local seller status overrides
@@ -47,9 +56,8 @@ export default function AdminDashboard() {
 
         // Auto-promote: same as Community.jsx — users with listings become sellers
         try {
-          const { data: listingRows } = await supabase.from('listings').select('seller_id');
-          if (listingRows && listingRows.length > 0) {
-            const sellerIds = [...new Set(listingRows.map(l => l.seller_id).filter(Boolean))];
+          if (listingsData && listingsData.length > 0) {
+            const sellerIds = [...new Set(listingsData.map(l => l.seller_id).filter(Boolean))];
             const nonSellerIds = sellerIds.filter(id => {
               const prof = allProfiles.find(p => p.id === id);
               return prof && !adminRoles.includes(prof.role) && prof.role !== 'seller';
@@ -73,15 +81,21 @@ export default function AdminDashboard() {
         });
 
         setSellerProfiles(verifiedSellers);
-      } catch (err) {}
+      } catch (err) {
+        console.warn('Dashboard fetch error:', err.message);
+      }
     };
 
-    fetchUsers();
+    fetchDashboardData();
 
-    const handleStatusUpdate = () => fetchUsers();
+    const handleStatusUpdate = () => fetchDashboardData();
     window.addEventListener('sellerStatusUpdated', handleStatusUpdate);
-    return () => window.removeEventListener('sellerStatusUpdated', handleStatusUpdate);
-  }, [listings]);
+    window.addEventListener('listingStatusUpdated', handleStatusUpdate);
+    return () => {
+      window.removeEventListener('sellerStatusUpdated', handleStatusUpdate);
+      window.removeEventListener('listingStatusUpdated', handleStatusUpdate);
+    };
+  }, []);
 
   // Date filtering helper
   const filterByPeriod = (items, key1 = 'createdAt', key2 = 'created_at') => {
@@ -110,26 +124,41 @@ export default function AdminDashboard() {
     });
   };
 
-  const filteredListings = filterByPeriod(listings, 'createdAt', 'created_at');
-  const filteredOrders = filterByPeriod(orders, 'createdAt', 'created_at');
+  const filteredListings = filterByPeriod(allDbListings, 'createdAt', 'created_at');
+  const filteredOrders = filterByPeriod(allDbOrders, 'createdAt', 'created_at');
   const filteredUsers = filterByPeriod(userProfiles, 'created_at', 'createdAt');
 
   const totalUsersCount = userProfiles.length;
   const activeUsersInPeriod = filteredUsers.length;
 
   // Dynamic GMV calculation
-  const soldItems = filteredListings.filter(l => l.status === 'Sold' || l.status === 'Approved' || l.status === 'Active');
+  const soldItems = filteredListings.filter(l => {
+    const s = (l.status || '').toLowerCase();
+    return s === 'sold' || s === 'active' || s === 'approved';
+  });
   const gmvFromListings = soldItems.reduce((sum, l) => sum + (parseFloat(l.price) || 0), 0);
   const gmvFromOrders = filteredOrders.reduce((sum, o) => sum + (parseFloat(o.total || o.price) || 0), 0);
   const totalGMV = gmvFromListings + gmvFromOrders;
 
-  // Active Sellers count — real from Supabase profiles
-  const activeSellersCount = sellerProfiles.length;
+  // Active Sellers count — real from Supabase profiles, filtered dynamically by period
+  const filteredNewSellers = filterByPeriod(sellerProfiles, 'created_at', 'createdAt');
+  const activeSellersCount = period === 'All Time' ? sellerProfiles.length : filteredNewSellers.length;
 
-  // Listings snapshot
-  const activeCount  = filteredListings.filter(l => l.status === 'Approved' || l.status === 'Active').length;
-  const pendingCount = filteredListings.filter(l => l.status === 'Pending' || l.status === 'pending').length;
-  const soldCount    = filteredListings.filter(l => l.status === 'Sold').length;
+  // Listings snapshot (with lowercase status support for database records)
+  const activeCount  = filteredListings.filter(l => {
+    const s = (l.status || '').toLowerCase();
+    return s === 'active' || s === 'approved';
+  }).length;
+  
+  const pendingCount = filteredListings.filter(l => {
+    const s = (l.status || '').toLowerCase();
+    return s === 'pending';
+  }).length;
+  
+  const soldCount    = filteredListings.filter(l => {
+    const s = (l.status || '').toLowerCase();
+    return s === 'sold';
+  }).length;
 
   // Dynamic percentage growth calculations based on filter period
   const gmvTrendPct = totalGMV > 0 ? `+${((totalGMV / (totalGMV * 0.9)) * 10 - 10).toFixed(1)}%` : '0.0%';
@@ -347,15 +376,15 @@ export default function AdminDashboard() {
         <div className="stat-card green">
           <div className="stat-icon-wrapper"><Store size={20} color="#047857" /></div>
           <div className="stat-body">
-            <p className="stat-label">ACTIVE SELLERS</p>
+            <p className="stat-label">{period === 'All Time' ? 'ACTIVE SELLERS' : 'NEW SELLERS'}</p>
             <p className="stat-value">{activeSellersCount}</p>
           </div>
           <span className="stat-badge neutral"><TrendingUp size={11} /> {activeSellersCount > 0 ? '+100%' : '0%'}</span>
         </div>
 
-        {/* Real-time Listings Snapshot */}
+        {/* Listings Snapshot */}
         <div className="stat-card snapshot">
-          <p className="stat-label">REAL-TIME LISTINGS SNAPSHOT</p>
+          <p className="stat-label">LISTINGS SNAPSHOT</p>
           <div className="snapshot-row">
             <span className="snap-label">Approved Live</span>
             <span className="snap-val">{activeCount}</span>
