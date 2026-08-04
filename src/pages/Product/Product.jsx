@@ -15,7 +15,7 @@ import './Product.css';
 const Product = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { allMarketplaceProducts } = useListings();
+  const { allMarketplaceProducts, toggleLike, incrementViews } = useListings();
   const { user, profile } = useAuth();
   const productId = parseInt(id);
 
@@ -54,6 +54,31 @@ const Product = () => {
   const [buyerMsgInput, setBuyerMsgInput] = useState('');
 
   const [toastMessage, setToastMessage] = useState('');
+  const [sellerProfile, setSellerProfile] = useState(null);
+
+  useEffect(() => {
+    const fetchSellerProfile = async () => {
+      const sellerId = currentProduct?.seller?.id || currentProduct?.seller_id;
+      if (!sellerId) return;
+
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(String(sellerId))) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('phone, show_phone')
+          .eq('id', sellerId)
+          .single();
+
+        if (!error && data) {
+          setSellerProfile(data);
+        }
+      } catch (e) {}
+    };
+
+    fetchSellerProfile();
+  }, [currentProduct]);
 
   // Reset local states when product ID changes
   useEffect(() => {
@@ -65,11 +90,17 @@ const Product = () => {
     ];
     setActiveThumbnail(thumbs[0]);
     setWishlisted(currentProduct.wishlisted);
+
+    if (id) {
+      incrementViews(id);
+    }
   }, [id, currentProduct]);
 
   const handleWishlistToggle = () => {
-    setWishlisted(!wishlisted);
-    showToast(!wishlisted ? 'Added to Saved Items' : 'Removed from Saved Items');
+    const newTarget = !wishlisted;
+    setWishlisted(newTarget);
+    toggleLike(id, newTarget);
+    showToast(newTarget ? 'Added to Saved Items' : 'Removed from Saved Items');
   };
 
   const showToast = (msg) => {
@@ -338,6 +369,27 @@ const Product = () => {
               <ShieldAlert size={20} />
             </button>
           </div>
+
+          {sellerProfile?.phone && sellerProfile?.show_phone && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '12px 16px',
+              borderRadius: '12px',
+              background: '#e0f2fe',
+              border: '1.5px solid #bae6fd',
+              color: '#0369a1',
+              fontWeight: '700',
+              fontSize: '13.5px',
+              marginTop: '16px'
+            }}>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+              </svg>
+              <span>Seller Contact: <a href={`tel:${sellerProfile.phone}`} style={{ color: 'inherit', textDecoration: 'underline' }}>{sellerProfile.phone}</a></span>
+            </div>
+          )}
 
           {/* Report Modal */}
           {currentProduct && (
