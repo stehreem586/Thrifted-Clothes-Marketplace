@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Filter, Download, User, Clock, ChevronLeft, ChevronRight,
-  Shield, AlertOctagon, Trash2, Edit3, CheckCircle, TrendingUp
+  Download, User,
+  Shield, AlertOctagon, Trash2, CheckCircle, TrendingUp, Clock
 } from 'lucide-react';
-import { useListings } from '../../context/ListingsContext';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../utils/supabaseClient';
 import './Analytics.css';
@@ -17,27 +16,61 @@ const actionColorMap = {
 };
 
 export default function Analytics() {
-  const { listings, orders, reviews } = useListings();
   const { profile, user } = useAuth();
-  const [totalUsers, setTotalUsers] = useState(0);
 
-  // Fetch real user count
+  // All real data fetched from Supabase
+  const [allListings, setAllListings] = useState([]);
+  const [allReviews, setAllReviews] = useState([]);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchAll = async () => {
+      setLoading(true);
       try {
+        // Fetch listings
+        const { data: listingsData } = await supabase
+          .from('listings')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (listingsData) setAllListings(listingsData);
+
+        // Fetch reviews (if table exists)
+        try {
+          const { data: reviewsData } = await supabase
+            .from('reviews')
+            .select('*')
+            .order('created_at', { ascending: false });
+          if (reviewsData) setAllReviews(reviewsData);
+        } catch (_) {}
+
+        // Fetch registered user count
         const { count } = await supabase
           .from('profiles')
           .select('*', { count: 'exact', head: true });
         if (count !== null) setTotalUsers(count);
-      } catch (e) {}
+      } catch (e) {
+        console.warn('Analytics fetch error:', e.message);
+      } finally {
+        setLoading(false);
+      }
     };
-    fetchUsers();
+
+    fetchAll();
+
+    // Re-fetch when listings change
+    const handleUpdate = () => fetchAll();
+    window.addEventListener('listingStatusUpdated', handleUpdate);
+    window.addEventListener('sellerStatusUpdated', handleUpdate);
+    return () => {
+      window.removeEventListener('listingStatusUpdated', handleUpdate);
+      window.removeEventListener('sellerStatusUpdated', handleUpdate);
+    };
   }, []);
 
-  // Build a real activity log from existing listing & review events
-  const now = new Date();
   const fmtTime = (isoStr) => {
-    if (!isoStr) return now.toLocaleString();
+    if (!isoStr) return new Date().toLocaleString();
     try {
       return new Date(isoStr).toLocaleString('en-PK', {
         dateStyle: 'medium', timeStyle: 'short'
@@ -48,74 +81,80 @@ export default function Analytics() {
   const adminName = profile?.name || user?.email?.split('@')[0] || 'Admin';
   const adminInitial = adminName.charAt(0).toUpperCase();
 
-  // Generate real activity log rows from listings
+  // Normalize status
+  const normalizeStatus = (s) => {
+    const st = (s || '').toLowerCase();
+    if (st === 'active' || st === 'approved') return 'Live';
+    if (st === 'rejected') return 'Rejected';
+    if (st === 'sold') return 'Sold';
+    return 'Pending';
+  };
+
+  // Real computed stats from Supabase data
+  const approvedListings = allListings.filter(l => normalizeStatus(l.status) === 'Live');
+  const rejectedListings = allListings.filter(l => normalizeStatus(l.status) === 'Rejected');
+  const pendingListings  = allListings.filter(l => normalizeStatus(l.status) === 'Pending');
+
+  const approvalCount = approvedListings.length;
+  const removalCount  = rejectedListings.length;
+  const pendingCount  = pendingListings.length;
+  const totalReviews  = allReviews.length;
+
+  // Build real activity log
   const activityLogs = [];
 
-  // Approved listings
-  listings
-    .filter(l => l.status === 'Approved' || l.status === 'Active')
-    .slice(0, 3)
-    .forEach(l => activityLogs.push({
-      id: `app-${l.id}`,
-      timestamp: fmtTime(l.createdAt),
-      adminName,
-      adminInitial,
-      actionType: 'APPROVED LISTING',
-      actionColor: 'green',
-      target: l.title || 'Listing',
-      details: `PKR ${parseFloat(l.price).toLocaleString()}`,
-    }));
+  approvedListings.slice(0, 4).forEach(l => activityLogs.push({
+    id: `app-${l.id}`,
+    timestamp: fmtTime(l.created_at),
+    adminName,
+    adminInitial,
+    actionType: 'APPROVED LISTING',
+    actionColor: 'green',
+    target: l.title || 'Listing',
+    details: `PKR ${parseFloat(l.price || 0).toLocaleString()}`,
+    _raw: l.created_at,
+  }));
 
-  // Pending listings
-  listings
-    .filter(l => l.status === 'Pending' || l.status === 'pending')
-    .slice(0, 2)
-    .forEach(l => activityLogs.push({
-      id: `pend-${l.id}`,
-      timestamp: fmtTime(l.createdAt),
-      adminName,
-      adminInitial,
-      actionType: 'PENDING REVIEW',
-      actionColor: 'orange',
-      target: l.title || 'Listing',
-      details: `Awaiting approval`,
-    }));
+  pendingListings.slice(0, 3).forEach(l => activityLogs.push({
+    id: `pend-${l.id}`,
+    timestamp: fmtTime(l.created_at),
+    adminName,
+    adminInitial,
+    actionType: 'PENDING REVIEW',
+    actionColor: 'orange',
+    target: l.title || 'Listing',
+    details: 'Awaiting approval',
+    _raw: l.created_at,
+  }));
 
-  // Rejected listings
-  listings
-    .filter(l => l.status === 'Rejected')
-    .slice(0, 2)
-    .forEach(l => activityLogs.push({
-      id: `rej-${l.id}`,
-      timestamp: fmtTime(l.createdAt),
-      adminName,
-      adminInitial,
-      actionType: 'REJECTED LISTING',
-      actionColor: 'red',
-      target: l.title || 'Listing',
-      details: 'Did not meet guidelines',
-    }));
+  rejectedListings.slice(0, 3).forEach(l => activityLogs.push({
+    id: `rej-${l.id}`,
+    timestamp: fmtTime(l.created_at),
+    adminName,
+    adminInitial,
+    actionType: 'REJECTED LISTING',
+    actionColor: 'red',
+    target: l.title || 'Listing',
+    details: 'Did not meet guidelines',
+    _raw: l.created_at,
+  }));
 
-  // Reviews
-  reviews.slice(0, 2).forEach(rv => activityLogs.push({
+  allReviews.slice(0, 3).forEach(rv => activityLogs.push({
     id: `rev-${rv.id}`,
-    timestamp: fmtTime(rv.date),
+    timestamp: fmtTime(rv.created_at || rv.date),
     adminName,
     adminInitial,
     actionType: 'REVIEW RECEIVED',
     actionColor: 'purple',
-    target: rv.listingTitle || 'Item',
-    details: `★ ${rv.rating} by ${rv.customerName}`,
+    target: rv.listing_title || rv.listingTitle || 'Item',
+    details: `★ ${rv.rating} by ${rv.customer_name || rv.customerName || 'Buyer'}`,
+    _raw: rv.created_at || rv.date,
   }));
 
-  // Sort by timestamp descending
-  activityLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  // Sort by most recent
+  activityLogs.sort((a, b) => new Date(b._raw || 0) - new Date(a._raw || 0));
 
-  // Real stat computations
   const totalLogged = activityLogs.length;
-  const removalCount = listings.filter(l => l.status === 'Rejected').length;
-  const approvalCount = listings.filter(l => l.status === 'Approved' || l.status === 'Active').length;
-  const pendingCount = listings.filter(l => l.status === 'Pending' || l.status === 'pending').length;
 
   return (
     <div className="analytics-root">
@@ -130,43 +169,43 @@ export default function Analytics() {
         </div>
       </div>
 
-      {/* Real Stat cards */}
+      {/* Real Stat cards — all from Supabase */}
       <div className="analytics-stats">
         <div className="astat-card orange-border">
           <div className="astat-icon-wrap orange-icon"><AlertOctagon size={18} strokeWidth={2.5} /></div>
           <div>
             <p className="astat-label">Total Activity Events</p>
-            <p className="astat-val">{totalLogged}</p>
+            <p className="astat-val">{loading ? '…' : totalLogged}</p>
           </div>
         </div>
         <div className="astat-card red-border">
           <div className="astat-icon-wrap red-icon"><Trash2 size={18} strokeWidth={2.5} /></div>
           <div>
             <p className="astat-label">Rejected Listings</p>
-            <p className="astat-val">{removalCount}</p>
+            <p className="astat-val">{loading ? '…' : removalCount}</p>
           </div>
         </div>
         <div className="astat-card blue-border">
           <div className="astat-icon-wrap blue-icon"><Shield size={18} strokeWidth={2.5} /></div>
           <div>
             <p className="astat-label">Approved Listings</p>
-            <p className="astat-val">{approvalCount}</p>
+            <p className="astat-val">{loading ? '…' : approvalCount}</p>
+          </div>
+        </div>
+        <div className="astat-card" style={{ borderLeft: '3px solid #f59e0b' }}>
+          <div className="astat-icon-wrap" style={{ background: '#fef3c7', color: '#b45309' }}>
+            <Clock size={18} strokeWidth={2.5} />
+          </div>
+          <div>
+            <p className="astat-label">Pending Reviews</p>
+            <p className="astat-val">{loading ? '…' : pendingCount}</p>
           </div>
         </div>
         <div className="astat-card gray-border">
           <div className="astat-icon-wrap gray-icon"><User size={18} strokeWidth={2.5} /></div>
           <div>
             <p className="astat-label">Registered Users</p>
-            <p className="astat-val">{totalUsers}</p>
-          </div>
-        </div>
-        <div className="astat-card" style={{ borderLeft: '3px solid #a78bfa' }}>
-          <div className="astat-icon-wrap" style={{ background: '#ede9fe', color: '#7c3aed' }}>
-            <TrendingUp size={18} strokeWidth={2.5} />
-          </div>
-          <div>
-            <p className="astat-label">Pending Reviews</p>
-            <p className="astat-val">{pendingCount}</p>
+            <p className="astat-val">{loading ? '…' : totalUsers}</p>
           </div>
         </div>
         <div className="astat-card" style={{ borderLeft: '3px solid #6ee7b7' }}>
@@ -175,14 +214,19 @@ export default function Analytics() {
           </div>
           <div>
             <p className="astat-label">Total Reviews</p>
-            <p className="astat-val">{reviews.length}</p>
+            <p className="astat-val">{loading ? '…' : totalReviews}</p>
           </div>
         </div>
       </div>
 
       {/* Real log table */}
       <div className="analytics-table-card">
-        {activityLogs.length === 0 ? (
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '60px 24px', color: '#94a3b8' }}>
+            <div style={{ fontSize: '48px', marginBottom: '12px' }}>⏳</div>
+            <p style={{ fontWeight: '700', fontSize: '16px', color: '#334155', margin: 0 }}>Loading activity…</p>
+          </div>
+        ) : activityLogs.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 24px', color: '#94a3b8' }}>
             <div style={{ fontSize: '48px', marginBottom: '12px' }}>📋</div>
             <p style={{ fontWeight: '700', fontSize: '16px', color: '#334155', margin: 0 }}>No activity yet</p>

@@ -110,7 +110,7 @@ export const ListingsProvider = ({ children }) => {
           .select('*')
           .eq('seller_id', userId);
 
-        if (!error && data && data.length > 0) {
+        if (!error && data) {
           const mapped = data.map(item => ({
             id: item.id,
             title: item.title,
@@ -131,13 +131,7 @@ export const ListingsProvider = ({ children }) => {
             createdAt: item.created_at || new Date().toISOString()
           }));
 
-          // Merge — Supabase wins for shared fields, keep local extras
-          setListings(prev => {
-            const map = new Map();
-            prev.forEach(p => map.set(String(p.id), p));
-            mapped.forEach(m => map.set(String(m.id), m));
-            return Array.from(map.values());
-          });
+          setListings(mapped);
         }
       } catch (err) {
         console.warn('Supabase listings fetch skipped:', err.message);
@@ -454,7 +448,7 @@ export const ListingsProvider = ({ children }) => {
           category: newProduct.category,
           size: newProduct.size,
           price: newProduct.price,
-          status: 'pending',
+          status: newProduct.status.toLowerCase(),
           condition: newProduct.condition,
           description: newProduct.description || '',
           image_url: Array.isArray(newProduct.images) && newProduct.images.length > 0

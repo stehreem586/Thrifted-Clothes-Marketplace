@@ -15,14 +15,9 @@ export default function Sellers() {
   const [editStatus, setEditStatus] = useState('Verified');
   const [editStatusValue, setEditStatusValue] = useState('Verified');
 
-  // Dynamic Real Sellers State (loaded from Supabase profiles or published listings)
-  const [sellerList, setSellerList] = useState(() => {
-    try {
-      const saved = localStorage.getItem('secondlife_admin_sellers');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {}
-    return [];
-  });
+  // Always start empty — Supabase fetch fills this
+  const [sellerList, setSellerList] = useState([]);
+  const [loadingSellers, setLoadingSellers] = useState(true);
 
   // State for all database listings to accurately count listings per seller
   const [allDbListings, setAllDbListings] = useState([]);
@@ -30,6 +25,7 @@ export default function Sellers() {
   // Hydrate real sellers and listings from Supabase
   useEffect(() => {
     const fetchRealSellers = async () => {
+      setLoadingSellers(true);
       try {
         const adminRoles = ['admin', 'super_admin', 'moderator', 'supporter'];
 
@@ -111,7 +107,9 @@ export default function Sellers() {
             city: p.city ? `${p.city}, Pakistan` : 'Pakistan',
             avatar: realAvatar,
             status: resolvedStatus,
-            bio: p.bio || 'No store bio description provided.'
+            bio: p.bio || 'No store bio description provided.',
+            phone: p.phone || '',
+            show_phone: !!p.show_phone
           });
         });
 
@@ -132,7 +130,9 @@ export default function Sellers() {
               city: l.seller?.location || 'Pakistan',
               avatar: realAvatar,
               status: resolvedStatus,
-              bio: 'No store bio description provided.'
+              bio: 'No store bio description provided.',
+              phone: l.seller?.phone || '',
+              show_phone: !!l.seller?.show_phone
             });
           }
         });
@@ -141,6 +141,8 @@ export default function Sellers() {
         setSellerList(list);
       } catch (err) {
         console.warn('Real sellers fetch notice:', err.message);
+      } finally {
+        setLoadingSellers(false);
       }
     };
 
@@ -150,12 +152,6 @@ export default function Sellers() {
     window.addEventListener('sellerStatusUpdated', handleStatusUpdate);
     return () => window.removeEventListener('sellerStatusUpdated', handleStatusUpdate);
   }, [listings]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('secondlife_admin_sellers', JSON.stringify(sellerList));
-    } catch (e) {}
-  }, [sellerList]);
 
   // Combine listings from Supabase DB and ListingsContext dynamically for accurate total listing counts
   const sellersWithListings = sellerList.map(seller => {
@@ -304,8 +300,8 @@ export default function Sellers() {
         </div>
         <div className="sstat-card">
           <p className="sstat-label">TOTAL STORE LISTINGS</p>
-          <p className="sstat-big">{listings.length}</p>
-          <p className="sstat-hint">Submitted Items</p>
+          <p className="sstat-big">{allDbListings.length}</p>
+          <p className="sstat-hint">From Supabase DB</p>
         </div>
         <div className="sstat-card">
           <p className="sstat-label">AVG. SELLER RATING</p>
@@ -321,13 +317,25 @@ export default function Sellers() {
         <div className="sellers-table-top">
           <p className="section-label">Official Seller Records</p>
           <div className="tab-row">
-            {['All Sellers', 'Verified', 'Pending', 'Flagged'].map(t => (
+            {[
+              { label: 'All Sellers', count: sellersWithListings.length },
+              { label: 'Verified',    count: sellersWithListings.filter(s => s.status === 'Verified').length },
+              { label: 'Pending',     count: sellersWithListings.filter(s => s.status === 'Pending').length },
+              { label: 'Flagged',     count: sellersWithListings.filter(s => s.status === 'Flagged' || s.status === 'Suspended').length },
+            ].map(({ label, count }) => (
               <button
-                key={t}
-                className={`tab-btn ${activeTab === t ? 'active' : ''}`}
-                onClick={() => setActiveTab(t)}
+                key={label}
+                className={`tab-btn ${activeTab === label ? 'active' : ''}`}
+                onClick={() => setActiveTab(label)}
               >
-                {t}
+                {label}
+                <span style={{
+                  marginLeft: '6px', background: activeTab === label ? 'rgba(255,255,255,0.25)' : '#f1f5f9',
+                  color: activeTab === label ? 'inherit' : '#64748b',
+                  borderRadius: '10px', padding: '1px 7px', fontSize: '11px', fontWeight: '700'
+                }}>
+                  {count}
+                </span>
               </button>
             ))}
           </div>
@@ -407,6 +415,15 @@ export default function Sellers() {
                   </td>
                 </tr>
               ))
+            ) : loadingSellers ? (
+              <tr>
+                <td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '28px', height: '28px', border: '3px solid #e2e8f0', borderTop: '3px solid #c19358', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                    <span style={{ fontSize: '13px' }}>Loading sellers from Supabase…</span>
+                  </div>
+                </td>
+              </tr>
             ) : (
               <tr>
                 <td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
@@ -450,13 +467,34 @@ export default function Sellers() {
                 <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#334155' }}>{viewSeller.bio || 'No store bio description provided.'}</p>
               </div>
 
+              {viewSeller.phone && viewSeller.show_phone && (
+                <div style={{
+                  background: '#e0f2fe',
+                  border: '1.5px solid #bae6fd',
+                  color: '#0369a1',
+                  padding: '12px 14px',
+                  borderRadius: '10px',
+                  marginBottom: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontWeight: '700',
+                  fontSize: '13.5px'
+                }}>
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                  </svg>
+                  <span>Seller Contact Info: <a href={`tel:${viewSeller.phone}`} style={{ color: 'inherit', textDecoration: 'underline' }}>{viewSeller.phone}</a></span>
+                </div>
+              )}
+
               {/* Seller's Submitted Items Preview */}
               <h4 style={{ margin: '0 0 12px 0', fontSize: '15px' }}>Store Listings ({viewSeller.items.length})</h4>
               <div style={{ maxHeight: '200px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {viewSeller.items.length > 0 ? (
                   viewSeller.items.map(item => (
                     <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 12px', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-                      <img src={item.image} alt={item.title} style={{ width: '36px', height: '36px', borderRadius: '6px', objectFit: 'cover' }} />
+                      <img src={item.image_url || item.image || 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=80&q=80'} alt={item.title} style={{ width: '36px', height: '36px', borderRadius: '6px', objectFit: 'cover' }} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: '#0f172a' }}>{item.title}</p>
                         <span style={{ fontSize: '11px', color: '#64748b' }}>PKR {parseFloat(item.price).toLocaleString()} • {item.status}</span>

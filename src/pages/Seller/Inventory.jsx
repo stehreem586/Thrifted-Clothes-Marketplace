@@ -19,6 +19,7 @@ function Inventory({ inventorySearch, onNavigateToProfile }) {
   const [previewProduct, setPreviewProduct] = useState(null);
   const [showPromoModal, setShowPromoModal] = useState(false);
   const [showProfileRequiredModal, setShowProfileRequiredModal] = useState(false);
+  const [deleteConfirmationId, setDeleteConfirmationId] = useState(null);
 
   // Form states
   const [formTitle, setFormTitle] = useState('');
@@ -63,9 +64,7 @@ function Inventory({ inventorySearch, onNavigateToProfile }) {
   };
 
   const handleDeleteListing = (id) => {
-    if (window.confirm('Are you sure you want to delete this listing?')) {
-      deleteListing(id);
-    }
+    setDeleteConfirmationId(id);
   };
 
   const handleFileUpload = (e, slotIndex) => {
@@ -122,12 +121,15 @@ function Inventory({ inventorySearch, onNavigateToProfile }) {
         images: filledImages
       });
     } else if (inventoryMode === 'edit' && editingListing) {
+      const nextStatus = status === 'Draft'
+        ? 'Draft'
+        : (editingListing.status === 'Draft' ? 'Pending' : editingListing.status || 'Pending');
       await updateListing(editingListing.id, {
         title: formTitle,
         category: formCategory,
         size: formSize,
         price: priceNum,
-        status: status === 'Draft' ? 'Draft' : editingListing.status || 'Pending',
+        status: nextStatus,
         condition: formCondition,
         description: formDescription,
         tags: formTags,
@@ -494,6 +496,52 @@ function Inventory({ inventorySearch, onNavigateToProfile }) {
           </div>
         )}
 
+        {/* ── Custom Professional Delete Confirmation Modal ── */}
+        {deleteConfirmationId && (
+          <div className="seller-help-overlay" onClick={() => setDeleteConfirmationId(null)}>
+            <div className="seller-help-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '420px', padding: '24px', textAlign: 'center' }}>
+              <div style={{ color: '#dc2626', marginBottom: '16px' }}>
+                <svg style={{ margin: '0 auto' }} width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 6h18" />
+                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                  <line x1="10" y1="11" x2="10" y2="17" />
+                  <line x1="14" y1="11" x2="14" y2="17" />
+                </svg>
+              </div>
+              <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '700', color: '#0f172a' }}>Delete Listing permanently?</h3>
+              <p style={{ margin: '0 0 20px 0', fontSize: '14px', color: '#64748b', lineHeight: '1.5' }}>
+                Are you sure you want to delete this listing? This action cannot be undone and it will be deleted permanently from the database.
+              </p>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                <button
+                  type="button"
+                  style={{
+                    padding: '10px 20px', borderRadius: '10px', border: '1.5px solid #e2e8f0',
+                    background: '#fff', fontSize: '13px', fontWeight: '600', color: '#475569', cursor: 'pointer'
+                  }}
+                  onClick={() => setDeleteConfirmationId(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  style={{
+                    padding: '10px 20px', borderRadius: '10px', border: 'none',
+                    background: '#dc2626', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: 'pointer'
+                  }}
+                  onClick={() => {
+                    deleteListing(deleteConfirmationId);
+                    setDeleteConfirmationId(null);
+                  }}
+                >
+                  Delete permanently
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── Profile Setup & Phone Verification Required Modal ── */}
         {showProfileRequiredModal && (
           <div className="seller-help-overlay" onClick={() => setShowProfileRequiredModal(false)}>
@@ -705,7 +753,9 @@ function Inventory({ inventorySearch, onNavigateToProfile }) {
             <div className="form-buttons-action-row">
               <button type="button" className="draft-action-btn" onClick={e => handleFormSubmit(e, 'Draft')}>Save Draft</button>
               <button type="submit" className="publish-action-btn">
-                {inventoryMode === 'create' ? 'Publish Listing' : 'Save Changes'}
+                {inventoryMode === 'create' 
+                  ? 'Publish Listing' 
+                  : (editingListing?.status === 'Draft' ? 'Publish Listing' : 'Save Changes')}
               </button>
             </div>
           </form>
