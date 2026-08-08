@@ -60,11 +60,14 @@ export default function Inventory() {
             category: item.category || 'Other',
             size: item.size || 'OS',
             price: parseFloat(item.price) || 0,
-            status: item.status === 'sold' ? 'Sold'
-              : item.status === 'approved' ? 'Approved'
-              : item.status === 'rejected' ? 'Rejected'
-              : item.status === 'draft' ? 'Draft'
-              : 'Pending',
+            status: (() => {
+              const s = (item.status || '').toLowerCase();
+              if (s === 'sold') return 'Sold';
+              if (s === 'approved' || s === 'active') return 'Approved';
+              if (s === 'rejected') return 'Rejected';
+              if (s === 'draft') return 'Draft';
+              return 'Pending';
+            })(),
             condition: item.condition || 'Good',
             description: item.description || '',
             image: item.image_url || item.images?.[0] || 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=400&q=80',
@@ -92,36 +95,112 @@ export default function Inventory() {
   }, []);
 
   const approveListing = async (id) => {
+    const listingItem = allListings.find(item => String(item.id) === String(id));
+    const sellerId = listingItem?.seller_id;
+    const listingTitle = listingItem?.title || 'Your listing';
+
+    // Optimistically update UI first
+    setAllListings(prev =>
+      prev.map(item => String(item.id) === String(id) ? { ...item, status: 'Approved' } : item)
+    );
     try {
-      const { error } = await supabase.from('listings').update({ status: 'active' }).eq('id', id);
+      const { data: updated, error } = await supabase
+        .from('listings')
+        .update({ status: 'active' })
+        .eq('id', id)
+        .select();
+
       if (error) {
-        console.error('⚠️ Supabase approve listing failed:', error.message, error.details);
-        alert('Failed to approve listing in Supabase database: ' + error.message);
+        console.error('⚠️ Approve failed:', error.message);
+        alert('DB Error: ' + error.message);
+        fetchAllListings(); // revert
         return;
       }
-      setAllListings(prev =>
-        prev.map(item => String(item.id) === String(id) ? { ...item, status: 'Approved' } : item)
-      );
+      if (!updated || updated.length === 0) {
+        console.error('⚠️ Approve: 0 rows affected — RLS policy blocking update');
+        alert('Approve failed: Database permission denied. Make sure you are logged in as admin and RLS policies are applied.');
+        fetchAllListings(); // revert
+        return;
+      }
+
+      // Send verification notification to seller
+      if (sellerId) {
+        const sellerKey = `sellerNotifications_${sellerId}`;
+        let sellerNotifs = [];
+        try {
+          const raw = localStorage.getItem(sellerKey);
+          if (raw) sellerNotifs = JSON.parse(raw);
+        } catch (e) {}
+        sellerNotifs.unshift({
+          id: Date.now().toString(),
+          read: false,
+          title: 'Listing Approved! 🎉',
+          text: `Your listing "${listingTitle}" has been approved by Admin and is now live on SecondLife Marketplace.`,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          type: 'listing'
+        });
+        localStorage.setItem(sellerKey, JSON.stringify(sellerNotifs));
+      }
+
+      // Success — fire event to trigger updates across tabs/context
       window.dispatchEvent(new CustomEvent('listingStatusUpdated', { detail: { listingId: id, status: 'Approved' } }));
     } catch (err) {
       console.error('Approve exception:', err.message);
+      fetchAllListings(); // revert
     }
   };
 
   const rejectListing = async (id) => {
+    const listingItem = allListings.find(item => String(item.id) === String(id));
+    const sellerId = listingItem?.seller_id;
+    const listingTitle = listingItem?.title || 'Your listing';
+
+    setAllListings(prev =>
+      prev.map(item => String(item.id) === String(id) ? { ...item, status: 'Rejected' } : item)
+    );
     try {
-      const { error } = await supabase.from('listings').update({ status: 'rejected' }).eq('id', id);
+      const { data: updated, error } = await supabase
+        .from('listings')
+        .update({ status: 'rejected' })
+        .eq('id', id)
+        .select();
+
       if (error) {
-        console.error('⚠️ Supabase reject listing failed:', error.message, error.details);
-        alert('Failed to reject listing in Supabase database: ' + error.message);
+        console.error('⚠️ Reject failed:', error.message);
+        alert('DB Error: ' + error.message);
+        fetchAllListings();
         return;
       }
-      setAllListings(prev =>
-        prev.map(item => String(item.id) === String(id) ? { ...item, status: 'Rejected' } : item)
-      );
+      if (!updated || updated.length === 0) {
+        console.error('⚠️ Reject: 0 rows affected — RLS policy blocking update');
+        alert('Reject failed: Database permission denied. Make sure you are logged in as admin and RLS policies are applied.');
+        fetchAllListings();
+        return;
+      }
+
+      // Send rejection notification to seller
+      if (sellerId) {
+        const sellerKey = `sellerNotifications_${sellerId}`;
+        let sellerNotifs = [];
+        try {
+          const raw = localStorage.getItem(sellerKey);
+          if (raw) sellerNotifs = JSON.parse(raw);
+        } catch (e) {}
+        sellerNotifs.unshift({
+          id: Date.now().toString(),
+          read: false,
+          title: 'Listing Rejected ❌',
+          text: `Your listing "${listingTitle}" was rejected by Admin review.`,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          type: 'listing'
+        });
+        localStorage.setItem(sellerKey, JSON.stringify(sellerNotifs));
+      }
+
       window.dispatchEvent(new CustomEvent('listingStatusUpdated', { detail: { listingId: id, status: 'Rejected' } }));
     } catch (err) {
       console.error('Reject exception:', err.message);
+      fetchAllListings();
     }
   };
 

@@ -31,6 +31,28 @@ function SellerProfile() {
   const totalReviews = orders.filter(o => o.reviewed || o.status === 'Delivered').length;
   const avgRating = totalReviews > 0 ? 5.0 : 0;
 
+  // ── Seller account approval status (from Supabase profile or local override) ──
+  let accountApproved = false;
+  try {
+    const rawLocal = localStorage.getItem('secondlife_seller_statuses');
+    if (rawLocal && user?.id) {
+      const localStatuses = JSON.parse(rawLocal);
+      const override = localStatuses[user.id];
+      if (override === 'Verified') accountApproved = true;
+      else if (override === 'Pending' || override === 'Flagged') accountApproved = false;
+      else accountApproved = (profile?.role === 'seller' && profile?.status === 'active') || profile?.seller_status === 'Verified';
+    } else {
+      accountApproved = (profile?.role === 'seller' && profile?.status === 'active') || profile?.seller_status === 'Verified';
+    }
+  } catch (e) {}
+
+  // ── Final seller badge label ──
+  // Trusted Seller: 15+ sales AND avg rating >= 4.5
+  // Verified: account approved by admin
+  // Not Verified: pending approval
+  const isTrustedSeller = totalSales >= 15 && avgRating >= 4.5;
+  const sellerBadge = isTrustedSeller ? 'Trusted Seller' : accountApproved ? 'Verified' : 'Not Verified';
+
   // ── Populate fields from Supabase profile or user-scoped localStorage ──
   useEffect(() => {
     const uid = user?.id;
@@ -167,6 +189,46 @@ function SellerProfile() {
               </div>
             </div>
           </div>
+
+          {listings.length > 0 && (
+            <div className="seller-status-card" style={{
+              marginTop: '16px',
+              padding: '16px',
+              borderRadius: '12px',
+              background: '#ffffff',
+              border: `1.5px solid ${isTrustedSeller ? '#f59e0b' : accountApproved ? '#22c55e' : '#e2e8f0'}`,
+              boxShadow: isTrustedSeller ? '0 2px 12px rgba(245,158,11,0.12)' : '0 1px 3px rgba(0,0,0,0.05)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px'
+            }}>
+              <h4 style={{ margin: 0, fontSize: '12px', color: '#64748b', letterSpacing: '0.05em', textTransform: 'uppercase', fontWeight: '700' }}>
+                Seller Account Status
+              </h4>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                <div style={{
+                  width: '10px',
+                  height: '10px',
+                  borderRadius: '50%',
+                  background: isTrustedSeller ? '#f59e0b' : accountApproved ? '#22c55e' : '#94a3b8'
+                }} />
+                <span style={{
+                  fontSize: '15px',
+                  fontWeight: '700',
+                  color: isTrustedSeller ? '#b45309' : accountApproved ? '#15803d' : '#64748b'
+                }}>
+                  {isTrustedSeller ? '⭐ Trusted Seller' : accountApproved ? '✓ Verified' : 'Not Verified'}
+                </span>
+              </div>
+              <p style={{ margin: 0, fontSize: '12px', color: '#64748b', lineHeight: '1.4' }}>
+                {isTrustedSeller
+                  ? 'You are a Trusted Seller! Earned with 15+ sales and a high rating.'
+                  : accountApproved
+                  ? 'Your store is verified and your approved listings are live on the marketplace.'
+                  : 'Your seller account is pending Admin verification.'}
+              </p>
+            </div>
+          )}
 
           <div className="seller-tips-card">
             <h4>💡 Seller Tips</h4>

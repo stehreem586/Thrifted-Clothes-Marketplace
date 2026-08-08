@@ -15,7 +15,8 @@ import './Product.css';
 const Product = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { allMarketplaceProducts, setOrders } = useListings();
+  // merged: keep setOrders (purchase flow) + toggleLike/incrementViews (listings context sync)
+  const { allMarketplaceProducts, setOrders, toggleLike, incrementViews } = useListings();
   const { user, profile } = useAuth();
   const [currentProduct, setCurrentProduct] = useState(null);
   const [loadingProduct, setLoadingProduct] = useState(true);
@@ -35,11 +36,14 @@ const Product = () => {
 
   const [toastMessage, setToastMessage] = useState('');
 
+  // Seller phone-reveal state (origin/main addition)
+  const [sellerProfile, setSellerProfile] = useState(null);
+
   // Fetch listing and seller details from Supabase if id is a UUID, else fallback to dummy data
   useEffect(() => {
     const fetchProductData = async () => {
       setLoadingProduct(true);
-      
+
       const cleanId = id.startsWith('seller-') ? id.replace('seller-', '') : id;
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       const isUuid = uuidRegex.test(cleanId);
@@ -133,9 +137,9 @@ const Product = () => {
     };
 
     const fallbackToDummy = () => {
-      const found = 
-        allMarketplaceProducts.find(p => String(p.id) === String(id)) || 
-        similarProducts.find(p => String(p.id) === String(id)) || 
+      const found =
+        allMarketplaceProducts.find(p => String(p.id) === String(id)) ||
+        similarProducts.find(p => String(p.id) === String(id)) ||
         allMarketplaceProducts.find(p => String(p.id) === '4') ||
         browseProducts.find(p => p.id === 4);
       if (found) {
@@ -167,6 +171,33 @@ const Product = () => {
     loadWishlistStatus();
   }, [id, user]);
 
+  // Fetch seller phone details for the "show phone" contact banner (origin/main addition)
+  useEffect(() => {
+    const fetchSellerProfile = async () => {
+      const sellerId = currentProduct?.seller?.id || currentProduct?.seller_id;
+      if (!sellerId) return;
+
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(String(sellerId))) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('phone, show_phone')
+          .eq('id', sellerId)
+          .single();
+
+        if (!error && data) {
+          setSellerProfile(data);
+        }
+      } catch (e) {
+        // no-op — phone banner just won't render
+      }
+    };
+
+    fetchSellerProfile();
+  }, [currentProduct]);
+
   // Reset local states when product ID changes
   useEffect(() => {
     if (!currentProduct) return;
@@ -179,6 +210,11 @@ const Product = () => {
     setActiveThumbnail(thumbs[0]);
     if (!id.startsWith('seller-') && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
       setWishlisted(!!currentProduct.wishlisted);
+    }
+
+    // origin/main: track a view each time the product changes
+    if (id && incrementViews) {
+      incrementViews(id);
     }
   }, [id, currentProduct]);
 
@@ -325,6 +361,11 @@ const Product = () => {
     setWishlisted(nextWishlistState);
     showToast(nextWishlistState ? 'Added to Saved Items' : 'Removed from Saved Items');
 
+    // origin/main: keep the in-memory listings context (like counts, browse grid) in sync
+    if (toggleLike) {
+      toggleLike(id, nextWishlistState);
+    }
+
     try {
       const cleanId = id.startsWith('seller-') ? id.replace('seller-', '') : id;
       await toggleSavedListing(user.id, cleanId, nextWishlistState);
@@ -460,7 +501,7 @@ const Product = () => {
   const categoryLabel = currentProduct.category || 'Vintage';
   const conditionLabel = currentProduct.condition || 'Excellent';
   const sustainabilityLabel = currentProduct.sustainability || 'High';
-  const descriptionLabel = currentProduct.description || 
+  const descriptionLabel = currentProduct.description ||
     'A premium selected pre-loved item, chosen for its exceptional quality and style. Responsibly sourced and curated by our community to give fashion a second life.';
 
   return (
@@ -485,10 +526,10 @@ const Product = () => {
                 type="button"
               >
                 <div className="thumbnail-btn-inner" style={{ overflow: 'hidden', width: '100%', height: '100%', borderRadius: 'inherit' }}>
-                  <img 
-                    src={currentProduct.image} 
-                    alt={`Thumbnail ${idx + 1}`} 
-                    className="thumbnail-img" 
+                  <img
+                    src={currentProduct.image}
+                    alt={`Thumbnail ${idx + 1}`}
+                    className="thumbnail-img"
                     style={{
                       width: '100%',
                       height: '100%',
@@ -503,10 +544,10 @@ const Product = () => {
           </div>
 
           <div className="main-image-container" style={{ overflow: 'hidden' }}>
-            <img 
-              src={currentProduct.image} 
-              alt={currentProduct.title} 
-              className="main-display-img" 
+            <img
+              src={currentProduct.image}
+              alt={currentProduct.title}
+              className="main-display-img"
               style={{
                 transform: activeThumbnail.transform,
                 transformOrigin: activeThumbnail.transformOrigin,
@@ -564,20 +605,20 @@ const Product = () => {
           </div>
 
           {/* Seller Profile Card */}
-          <div 
-            className="detail-seller-card" 
+          <div
+            className="detail-seller-card"
             onClick={() => {
               const sellerId = currentProduct.seller?.id;
               const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
               if (sellerId && uuidRegex.test(sellerId)) {
                 navigate(`/seller-profile/${sellerId}`);
               } else {
-                const sellerSlug = currentProduct.seller?.name ? 
+                const sellerSlug = currentProduct.seller?.name ?
                   currentProduct.seller.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '') : 'vintage-vibes';
                 const targetSlug = sellerSlug.includes('elena') ? 'elena-archive' : sellerSlug;
                 navigate(`/seller-profile/${targetSlug}`);
               }
-            }} 
+            }}
             style={{ cursor: 'pointer' }}
           >
             <div className="seller-avatar-wrapper">
@@ -613,9 +654,9 @@ const Product = () => {
             </button>
 
             {user && currentProduct.seller?.id && user.id !== currentProduct.seller.id && currentProduct.status !== 'sold' && currentProduct.status !== 'Sold' && (
-              <button 
-                type="button" 
-                className="btn-confirm-purchase" 
+              <button
+                type="button"
+                className="btn-confirm-purchase"
                 onClick={handleConfirmPurchase}
                 disabled={confirmingPurchase}
               >
@@ -651,6 +692,27 @@ const Product = () => {
               <ShieldAlert size={20} />
             </button>
           </div>
+
+          {sellerProfile?.phone && sellerProfile?.show_phone && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '12px 16px',
+              borderRadius: '12px',
+              background: '#e0f2fe',
+              border: '1.5px solid #bae6fd',
+              color: '#0369a1',
+              fontWeight: '700',
+              fontSize: '13.5px',
+              marginTop: '16px'
+            }}>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+              </svg>
+              <span>Seller Contact: <a href={`tel:${sellerProfile.phone}`} style={{ color: 'inherit', textDecoration: 'underline' }}>{sellerProfile.phone}</a></span>
+            </div>
+          )}
 
           {/* Report Modal */}
           {currentProduct && (
@@ -698,8 +760,8 @@ const Product = () => {
 
       {/* Review Prompt Modal */}
       {showReviewPrompt && (
-        <div 
-          className="product-modal-backdrop" 
+        <div
+          className="product-modal-backdrop"
           onClick={() => setShowReviewPrompt(false)}
           style={{
             position: 'fixed',
@@ -716,8 +778,8 @@ const Product = () => {
             padding: '20px'
           }}
         >
-          <div 
-            className="product-modal-card card" 
+          <div
+            className="product-modal-card card"
             onClick={e => e.stopPropagation()}
             style={{
               width: '100%',
@@ -797,8 +859,8 @@ const Product = () => {
 
       {/* Seller Rating Modal */}
       {showRatingModal && (
-        <div 
-          className="product-modal-backdrop" 
+        <div
+          className="product-modal-backdrop"
           onClick={() => setShowRatingModal(false)}
           style={{
             position: 'fixed',
@@ -815,8 +877,8 @@ const Product = () => {
             padding: '20px'
           }}
         >
-          <div 
-            className="product-modal-card card" 
+          <div
+            className="product-modal-card card"
             onClick={e => e.stopPropagation()}
             style={{
               width: '100%',
@@ -830,7 +892,7 @@ const Product = () => {
               boxSizing: 'border-box'
             }}
           >
-            <button 
+            <button
               onClick={() => setShowRatingModal(false)}
               style={{
                 position: 'absolute',

@@ -110,7 +110,7 @@ export const ListingsProvider = ({ children }) => {
           .select('*')
           .eq('seller_id', userId);
 
-        if (!error && data && data.length > 0) {
+        if (!error && data) {
           const mapped = data.map(item => ({
             id: item.id,
             title: item.title,
@@ -131,13 +131,7 @@ export const ListingsProvider = ({ children }) => {
             createdAt: item.created_at || new Date().toISOString()
           }));
 
-          // Merge — Supabase wins for shared fields, keep local extras
-          setListings(prev => {
-            const map = new Map();
-            prev.forEach(p => map.set(String(p.id), p));
-            mapped.forEach(m => map.set(String(m.id), m));
-            return Array.from(map.values());
-          });
+          setListings(mapped);
         }
       } catch (err) {
         console.warn('Supabase listings fetch skipped:', err.message);
@@ -192,38 +186,80 @@ export const ListingsProvider = ({ children }) => {
   // ─────────────────────────────────────────────────────────
   // 5. View / Like interactions (from buyer side)
   // ─────────────────────────────────────────────────────────
-  const incrementViews = (productId) => {
+  const incrementViews = async (productId) => {
     const targetId = String(productId).replace('seller-', '');
+    
+    // 1. Optimistic local update
     setListings(prev => prev.map(item => {
       if (String(item.id) === targetId) {
         return { ...item, views: (parseInt(item.views) || 0) + 1 };
       }
       return item;
     }));
+
+    // 2. Persist to Supabase
+    try {
+      const { data } = await supabase.from('listings').select('views').eq('id', targetId).single();
+      const currentViews = data?.views || 0;
+      await supabase.from('listings').update({ views: currentViews + 1 }).eq('id', targetId);
+      
+      // Dispatch custom event to notify listeners
+      window.dispatchEvent(new CustomEvent('listingStatusUpdated', { detail: { listingId: targetId } }));
+    } catch (e) {
+      console.warn('Could not sync views to Supabase:', e.message);
+    }
   };
 
-  const toggleLike = (productId, isLikedNow) => {
+  const toggleLike = async (productId, isLikedNow) => {
     const targetId = String(productId).replace('seller-', '');
+    let sellerId = null;
+    let productTitle = 'your item';
+
+    // 1. Optimistic local update
     setListings(prev => prev.map(item => {
       if (String(item.id) === targetId) {
+        sellerId = item.seller_id;
+        productTitle = item.title;
         const newLikes = isLikedNow
           ? (parseInt(item.likes) || 0) + 1
           : Math.max(0, (parseInt(item.likes) || 0) - 1);
 
-        if (isLikedNow) {
-          setNotifications(n => [{
-            id: Date.now().toString(),
-            read: false,
-            title: 'New Wishlist Add ❤️',
-            text: `Someone added "${item.title}" to their wishlist.`,
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            type: 'like'
-          }, ...n].slice(0, 60));
-        }
         return { ...item, likes: newLikes };
       }
       return item;
     }));
+
+    // 2. Send notification directly to seller's local storage inbox
+    if (isLikedNow && sellerId) {
+      const sellerKey = `sellerNotifications_${sellerId}`;
+      let sellerNotifs = [];
+      try {
+        const raw = localStorage.getItem(sellerKey);
+        if (raw) sellerNotifs = JSON.parse(raw);
+      } catch (e) {}
+      
+      sellerNotifs.unshift({
+        id: Date.now().toString(),
+        read: false,
+        title: 'New Wishlist Add ❤️',
+        text: `Someone added "${productTitle}" to their wishlist.`,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        type: 'like'
+      });
+      localStorage.setItem(sellerKey, JSON.stringify(sellerNotifs));
+    }
+
+    // 3. Persist to Supabase
+    try {
+      const { data } = await supabase.from('listings').select('likes').eq('id', targetId).single();
+      const currentLikes = data?.likes || 0;
+      const newLikes = isLikedNow ? currentLikes + 1 : Math.max(0, currentLikes - 1);
+      await supabase.from('listings').update({ likes: newLikes }).eq('id', targetId);
+      
+      window.dispatchEvent(new CustomEvent('listingStatusUpdated', { detail: { listingId: targetId } }));
+    } catch (e) {
+      console.warn('Could not sync likes to Supabase:', e.message);
+    }
   };
 
   // ─────────────────────────────────────────────────────────
@@ -429,7 +465,7 @@ export const ListingsProvider = ({ children }) => {
           category: newProduct.category,
           size: newProduct.size,
           price: newProduct.price,
-          status: 'pending',
+          status: newProduct.status.toLowerCase(),
           condition: newProduct.condition,
           description: newProduct.description || '',
           image_url: Array.isArray(newProduct.images) && newProduct.images.length > 0
