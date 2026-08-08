@@ -327,6 +327,33 @@
   transform: scale(0.98);
 }
 
+.btn-confirm-purchase {
+  flex: 1.25;
+  font-family: 'Inter', sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background-color: #10b981;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 15px;
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.15);
+}
+
+.btn-confirm-purchase:hover {
+  background-color: #059669;
+}
+
+.btn-confirm-purchase:active {
+  transform: scale(0.98);
+}
+
 /* Description Section */
 .detail-description-section {
   display: flex;

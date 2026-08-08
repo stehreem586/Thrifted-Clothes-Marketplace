@@ -145,6 +145,23 @@ export const ListingsProvider = ({ children }) => {
     return () => window.removeEventListener('listingStatusUpdated', handleListingStatusUpdate);
   }, [userId]);
 
+  // ── Sync reviews from localStorage on update ──
+  useEffect(() => {
+    const handleReviewsUpdate = () => {
+      try {
+        const saved = localStorage.getItem('secondlife_seller_reviews');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            setReviews(parsed.filter(r => !['rev-1', 'rev-2', 'rev-3'].includes(String(r.id))));
+          }
+        }
+      } catch (e) {}
+    };
+    window.addEventListener('sellerReviewsUpdated', handleReviewsUpdate);
+    return () => window.removeEventListener('sellerReviewsUpdated', handleReviewsUpdate);
+  }, []);
+
   // ─────────────────────────────────────────────────────────
   // 4. Notification helpers
   // ─────────────────────────────────────────────────────────
