@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useListings } from '../../context/ListingsContext';
+import { supabase } from '../../utils/supabaseClient';
 import './SellerProfile.css';
 
 const CITIES = [
@@ -13,7 +14,8 @@ const profileKey = (uid) => uid ? `sellerProfile_${uid}` : 'sellerProfile_guest'
 
 function SellerProfile() {
   const { user, profile, updateProfile, uploadAvatar } = useAuth();
-  const { listings, orders } = useListings();
+  const { listings, orders, reviews: contextReviews } = useListings();
+  const [dbReviews, setDbReviews] = useState([]);
 
   const [name, setName]         = useState('');
   const [city, setCity]         = useState('');
@@ -26,10 +28,30 @@ function SellerProfile() {
   const [saved, setSaved]       = useState(false); // success flash
   const [error, setError]       = useState('');
 
-  // ── Real stats from listings / orders ──
+  // Fetch real reviews from Supabase for seller rating calculation
+  useEffect(() => {
+    const fetchReviews = async () => {
+      if (!user?.id) return;
+      try {
+        const { data } = await supabase
+          .from('reviews')
+          .select('rating')
+          .eq('seller_id', user.id);
+        if (data) setDbReviews(data);
+      } catch (e) {}
+    };
+    fetchReviews();
+  }, [user]);
+
+  // Combine context and DB reviews
+  const allReviewsList = [...(contextReviews || []), ...dbReviews];
+
+  // ── Real stats from listings / orders / reviews ──
   const totalSales = listings.filter(i => i.status === 'Sold').length + orders.length;
-  const totalReviews = orders.filter(o => o.reviewed || o.status === 'Delivered').length;
-  const avgRating = totalReviews > 0 ? 5.0 : 0;
+  const totalReviews = allReviewsList.length;
+  const avgRating = totalReviews > 0
+    ? (allReviewsList.reduce((sum, r) => sum + (parseInt(r.rating) || 5), 0) / totalReviews)
+    : 0;
 
   // ── Seller account approval status (from Supabase profile or local override) ──
   let accountApproved = false;

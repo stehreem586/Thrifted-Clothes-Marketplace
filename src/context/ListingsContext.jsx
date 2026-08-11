@@ -197,14 +197,11 @@ export const ListingsProvider = ({ children }) => {
       return item;
     }));
 
-    // 2. Persist to Supabase
+    // 2. Persist to Supabase silently (no full-app re-fetch event)
     try {
       const { data } = await supabase.from('listings').select('views').eq('id', targetId).single();
       const currentViews = data?.views || 0;
       await supabase.from('listings').update({ views: currentViews + 1 }).eq('id', targetId);
-      
-      // Dispatch custom event to notify listeners
-      window.dispatchEvent(new CustomEvent('listingStatusUpdated', { detail: { listingId: targetId } }));
     } catch (e) {
       console.warn('Could not sync views to Supabase:', e.message);
     }
@@ -249,14 +246,12 @@ export const ListingsProvider = ({ children }) => {
       localStorage.setItem(sellerKey, JSON.stringify(sellerNotifs));
     }
 
-    // 3. Persist to Supabase
+    // 3. Persist to Supabase silently
     try {
       const { data } = await supabase.from('listings').select('likes').eq('id', targetId).single();
       const currentLikes = data?.likes || 0;
       const newLikes = isLikedNow ? currentLikes + 1 : Math.max(0, currentLikes - 1);
       await supabase.from('listings').update({ likes: newLikes }).eq('id', targetId);
-      
-      window.dispatchEvent(new CustomEvent('listingStatusUpdated', { detail: { listingId: targetId } }));
     } catch (e) {
       console.warn('Could not sync likes to Supabase:', e.message);
     }

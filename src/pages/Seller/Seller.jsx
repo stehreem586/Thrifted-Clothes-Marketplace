@@ -9,16 +9,17 @@ import Inventory from './Inventory';
 import OrderHistory from './OrderHistory';
 import SellerProfile from './SellerProfile';
 import SellerReviews from './SellerReviews';
+import SellerMessages from './SellerMessages';
 
 function Seller() {
   const { switchMode, user, profile } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
-  const { notifications, conversations, setConversations, sendSellerReply, markNotificationRead, markAllNotificationsRead } = useListings();
+  const { notifications, markNotificationRead, markAllNotificationsRead } = useListings();
+
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('inventory');
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showHelpGuide, setShowHelpGuide] = useState(false);
-  const [showMessagesModal, setShowMessagesModal] = useState(false);
   const [showNotifModal, setShowNotifModal] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -27,18 +28,6 @@ function Seller() {
     return !localStorage.getItem('secondlife_seller_onboarded');
   });
   const [onboardingStep, setOnboardingStep] = useState(1);
-
-  const [activeChatId, setActiveChatId] = useState(() => {
-    return conversations && conversations.length > 0 ? conversations[0].id : null;
-  });
-  const [replyInput, setReplyInput] = useState('');
-
-  // Sync activeChatId when new conversations arrive
-  useEffect(() => {
-    if (!activeChatId && conversations.length > 0) {
-      setActiveChatId(conversations[0].id);
-    }
-  }, [conversations]);
 
   // Search states (passed down to sub-views)
   const [dashboardSearch, setDashboardSearch] = useState('');
@@ -58,14 +47,7 @@ function Seller() {
   const handleFinishOnboarding = () => {
     localStorage.setItem('secondlife_seller_onboarded', 'true');
     setShowOnboarding(false);
-    switchTab('profile'); // Directs user to complete their mandatory profile details!
-  };
-
-  const handleSendReply = (e) => {
-    e.preventDefault();
-    if (!replyInput.trim() || !activeChatId) return;
-    sendSellerReply(activeChatId, replyInput.trim());
-    setReplyInput('');
+    switchTab('profile');
   };
 
   // Close dropdown on outside click
@@ -87,7 +69,6 @@ function Seller() {
       if (e.key === 'Escape') {
         setShowProfileMenu(false);
         setShowHelpGuide(false);
-        setShowMessagesModal(false);
         setShowNotifModal(false);
       }
     };
@@ -109,8 +90,6 @@ function Seller() {
     const initial = (profile?.name || user?.email || '?').charAt(0).toUpperCase();
     return <div className="mh-avatar-initials">{initial}</div>;
   };
-
-  const activeChat = conversations.find(c => c.id === activeChatId) || conversations[0];
 
   return (
     <div className="dashboard-container">
@@ -151,6 +130,9 @@ function Seller() {
             )},
             { key: 'inventory', label: 'Inventory', icon: (
               <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 11l2 2 4-4"/></>
+            )},
+            { key: 'messages', label: 'Messages', icon: (
+              <><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></>
             )},
             { key: 'history', label: 'History', icon: (
               <><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>
@@ -271,29 +253,6 @@ function Seller() {
               )}
             </button>
 
-            {/* Dedicated Seller Messages Button */}
-            <button
-              className="icon-btn message-btn"
-              onClick={() => { setShowMessagesModal(true); setActiveChatId(conversations[0]?.id || null); }}
-              title="Seller Messages Inbox"
-              style={{ position: 'relative' }}
-            >
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                <polyline points="22,6 12,13 2,6"/>
-              </svg>
-              {conversations && conversations.filter(c => c.unread).length > 0 && (
-                <span style={{
-                  position: 'absolute', top: '3px', right: '3px',
-                  minWidth: '16px', height: '16px', background: '#f97316',
-                  borderRadius: '50%', fontSize: '9px', fontWeight: '700',
-                  color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  lineHeight: 1, padding: '0 2px'
-                }}>
-                  {conversations.filter(c => c.unread).length}
-                </span>
-              )}
-            </button>
 
             {/* Profile Avatar Button + Dropdown */}
             <div className="mh-profile-container" ref={dropdownRef}>
@@ -367,7 +326,11 @@ function Seller() {
           <SellerReviews />
         )}
 
-        {['sales', 'messages', 'community'].includes(activeTab) && (
+        {activeTab === 'messages' && (
+          <SellerMessages />
+        )}
+
+        {['sales', 'community'].includes(activeTab) && (
           <div className="view-content fade-in">
             <div className="view-heading">
               <div>
@@ -555,126 +518,6 @@ function Seller() {
                   Complete Store Profile Now ➔
                 </button>
               )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Dedicated Seller Messages Inbox Modal ── */}
-      {showMessagesModal && (
-        <div className="seller-help-overlay" onClick={() => setShowMessagesModal(false)}>
-          <div className="seller-help-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '750px', padding: 0, overflow: 'hidden', height: '520px', display: 'flex', flexDirection: 'column' }}>
-            <div className="seller-help-header" style={{ padding: '16px 20px', background: '#0f172a', color: '#fff' }}>
-              <h3 style={{ color: '#fff' }}>💬 Seller Messages &amp; Buyer Inquiries</h3>
-              <button className="seller-help-close-btn" style={{ color: '#fff' }} onClick={() => setShowMessagesModal(false)}>✕</button>
-            </div>
-
-            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-              {/* Left Column: Buyer Conversations */}
-              <div style={{ width: '260px', borderRight: '1px solid #e2e8f0', background: '#f8fafc', overflowY: 'auto' }}>
-                <div style={{ padding: '12px 16px', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>
-                  Buyer Conversations ({conversations.length})
-                </div>
-                {conversations.length === 0 ? (
-                  <div style={{ padding: '24px 16px', textAlign: 'center', color: '#94a3b8' }}>
-                    <div style={{ fontSize: '28px', marginBottom: '8px' }}>📭</div>
-                    <p style={{ margin: 0, fontSize: '12px', fontWeight: '600', color: '#64748b' }}>No messages yet</p>
-                    <p style={{ margin: '4px 0 0', fontSize: '11px', lineHeight: '1.5' }}>
-                      When buyers message you about your listings, they will appear here.
-                    </p>
-                  </div>
-                ) : (
-                  conversations.map(chat => (
-                    <div
-                      key={chat.id}
-                      onClick={() => setActiveChatId(chat.id)}
-                      style={{
-                        display: 'flex', gap: '10px', padding: '12px 16px', cursor: 'pointer',
-                        background: activeChatId === chat.id ? '#ffffff' : 'transparent',
-                        borderLeft: activeChatId === chat.id ? '4px solid #c19358' : '4px solid transparent',
-                        borderBottom: '1px solid #f1f5f9'
-                      }}
-                    >
-                      <img src={chat.buyerAvatar} alt={chat.buyerName} style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover' }} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
-                          <span style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a' }}>{chat.buyerName}</span>
-                          <span style={{ fontSize: '10px', color: '#94a3b8' }}>{chat.time}</span>
-                        </div>
-                        <p style={{ fontSize: '12px', color: '#64748b', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {chat.lastMessage}
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              {/* Right Column: Chat or empty state */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#ffffff' }}>
-                {!activeChat ? (
-                  /* No active chat — show placeholder */
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', padding: '32px' }}>
-                    <div style={{ fontSize: '48px', marginBottom: '14px' }}>💬</div>
-                    <p style={{ margin: 0, fontWeight: '700', fontSize: '15px', color: '#1e293b' }}>No conversations yet</p>
-                    <p style={{ margin: '6px 0 0', fontSize: '13px', textAlign: 'center', lineHeight: '1.6', color: '#64748b' }}>
-                      Buyers can message you from any of your active listings.<br />
-                      Replies from you will appear here in real-time.
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    {/* Chat Header */}
-                    <div style={{ padding: '12px 16px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <img src={activeChat.buyerAvatar} alt={activeChat.buyerName} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
-                      <div>
-                        <h4 style={{ margin: 0, fontSize: '14px', color: '#0f172a' }}>{activeChat.buyerName}</h4>
-                        <span style={{ fontSize: '11px', color: '#16a34a' }}>● Active Buyer</span>
-                      </div>
-                      {activeChat.productTitle && (
-                        <span style={{ marginLeft: 'auto', fontSize: '11px', background: '#f1f5f9', padding: '3px 10px', borderRadius: '99px', color: '#475569' }}>
-                          Re: {activeChat.productTitle}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Messages */}
-                    <div style={{ flex: 1, padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      {activeChat.messages.map((msg, idx) => (
-                        <div
-                          key={idx}
-                          style={{
-                            alignSelf: msg.sender === 'seller' ? 'flex-end' : 'flex-start',
-                            maxWidth: '75%',
-                            background: msg.sender === 'seller' ? '#0f172a' : '#f1f5f9',
-                            color: msg.sender === 'seller' ? '#ffffff' : '#1e293b',
-                            padding: '10px 14px',
-                            borderRadius: msg.sender === 'seller' ? '14px 14px 2px 14px' : '14px 14px 14px 2px',
-                            fontSize: '13px'
-                          }}
-                        >
-                          <p style={{ margin: 0, lineHeight: '1.4' }}>{msg.text}</p>
-                          <span style={{ display: 'block', fontSize: '10px', opacity: 0.7, marginTop: '4px', textAlign: 'right' }}>{msg.time}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Reply Form */}
-                    <form onSubmit={handleSendReply} style={{ padding: '12px 16px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px' }}>
-                      <input
-                        type="text"
-                        placeholder="Type your reply to buyer..."
-                        value={replyInput}
-                        onChange={e => setReplyInput(e.target.value)}
-                        style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
-                      />
-                      <button type="submit" className="seller-help-gotit-btn" style={{ padding: '0 18px', fontSize: '13px' }}>
-                        Send
-                      </button>
-                    </form>
-                  </>
-                )}
-              </div>
             </div>
           </div>
         </div>

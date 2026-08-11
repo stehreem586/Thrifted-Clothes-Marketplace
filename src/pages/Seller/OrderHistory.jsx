@@ -1,13 +1,85 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useListings } from '../../context/ListingsContext';
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../utils/supabaseClient';
 import './OrderHistory.css';
 
 function OrderHistory({ ordersSearch }) {
-  const { orders } = useListings();
+  const { orders: contextOrders } = useListings();
+  const { user } = useAuth();
+  const [dbOrders, setDbOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('All');
 
+  // Fetch real orders from Supabase DB for current seller / user
+  useEffect(() => {
+    const fetchOrders = async () => {
+      if (!user?.id) {
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      try {
+        const { data: rawOrders, error } = await supabase
+          .from('orders')
+          .select('*, listings(id, title, price, image_url, category), profiles!orders_buyer_id_fkey(name, city)')
+          .or(`seller_id.eq.${user.id},buyer_id.eq.${user.id}`)
+          .order('created_at', { ascending: false });
+
+        if (!error && rawOrders) {
+          const mapped = rawOrders.map(o => {
+            const listing = o.listings || {};
+            const buyer = o.profiles || {};
+            const itemPrice = parseFloat(o.total || listing.price || 0);
+
+            return {
+              id: o.id ? `#SL-${String(o.id).slice(0, 8)}` : '#SL-0000',
+              rawId: o.id,
+              title: listing.title || 'Marketplace Item',
+              details: listing.category ? `Category: ${listing.category}` : 'Pre-loved thrift item',
+              buyerName: buyer.name || 'Verified Buyer',
+              buyerLocation: buyer.city ? `${buyer.city}, Pakistan` : 'Pakistan',
+              price: itemPrice,
+              date: o.created_at ? new Date(o.created_at).toLocaleDateString('en-PK', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recently',
+              status: o.status === 'confirmed' || o.status === 'Confirmed' ? 'Delivered' : (o.status || 'Delivered'),
+              image: listing.image_url || 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400&q=80'
+            };
+          });
+          setDbOrders(mapped);
+        }
+      } catch (err) {
+        console.warn('OrderHistory fetch notice:', err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, [user]);
+
+  // Combine DB orders with local context orders
+  const allOrders = useMemo(() => {
+    const map = new Map();
+    dbOrders.forEach(o => map.set(String(o.id), o));
+    (contextOrders || []).forEach(o => {
+      const formattedPrice = typeof o.total === 'number' ? o.total : parseFloat(String(o.total || o.price || 0).replace(/[^0-9.]/g, '')) || 0;
+      map.set(String(o.id), {
+        id: o.id || '#SL-9999',
+        title: o.title || 'Marketplace Item',
+        details: 'Pre-loved thrift item',
+        buyerName: o.buyerName || o.seller || 'Verified Buyer',
+        buyerLocation: o.buyerLocation || 'Pakistan',
+        price: formattedPrice,
+        date: o.date || 'Recently',
+        status: o.status || 'Delivered',
+        image: o.image || 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400&q=80'
+      });
+    });
+    return Array.from(map.values());
+  }, [dbOrders, contextOrders]);
+
   const filtered = useMemo(() => {
-    return orders.filter(order => {
+    return allOrders.filter(order => {
       if (statusFilter !== 'All' && order.status !== statusFilter) return false;
       if (ordersSearch && ordersSearch.trim() !== '') {
         const term = ordersSearch.toLowerCase();
@@ -19,26 +91,26 @@ function OrderHistory({ ordersSearch }) {
       }
       return true;
     });
-  }, [orders, statusFilter, ordersSearch]);
+  }, [allOrders, statusFilter, ordersSearch]);
 
   const metrics = useMemo(() => {
-    const totalRev = orders.reduce((sum, o) => sum + (parseFloat(o.price) || 0), 0);
-    const count = orders.length;
+    const totalRev = allOrders.reduce((sum, o) => sum + (parseFloat(o.price) || 0), 0);
+    const count = allOrders.length;
     const avgVal = count > 0 ? (totalRev / count) : 0;
-    const pendingCount = orders.filter(o => o.status === 'Pending' || o.status === 'In Transit').length;
+    const pendingCount = allOrders.filter(o => o.status === 'Pending' || o.status === 'In Transit').length;
 
     return {
-      totalRevenue: totalRev > 0 ? `PKR ${totalRev.toLocaleString()}` : 'N/A',
-      totalOrders: count > 0 ? count : 'N/A',
-      avgOrderValue: avgVal > 0 ? `PKR ${Math.round(avgVal).toLocaleString()}` : 'N/A',
+      totalRevenue: totalRev > 0 ? `PKR ${totalRev.toLocaleString()}` : 'PKR 0',
+      totalOrders: count > 0 ? count : '0',
+      avgOrderValue: avgVal > 0 ? `PKR ${Math.round(avgVal).toLocaleString()}` : 'PKR 0',
       pendingShipping: pendingCount
     };
-  }, [orders]);
+  }, [allOrders]);
 
   const handleExportCSV = () => {
-    if (orders.length === 0) { alert('No order history to export.'); return; }
-    const headers = ['Order ID', 'Item', 'Buyer', 'Location', 'Price', 'Date', 'Status'];
-    const rows = orders.map(o => [o.id, `"${o.title}"`, `"${o.buyerName}"`, `"${o.buyerLocation}"`, o.price, o.date, o.status]);
+    if (allOrders.length === 0) { alert('No order history to export.'); return; }
+    const headers = ['Order ID', 'Item', 'Buyer', 'Location', 'Price (PKR)', 'Date', 'Status'];
+    const rows = allOrders.map(o => [o.id, `"${o.title}"`, `"${o.buyerName}"`, `"${o.buyerLocation}"`, o.price, o.date, o.status]);
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
@@ -98,76 +170,78 @@ function OrderHistory({ ordersSearch }) {
         </div>
       </div>
 
-      {/* Orders Table */}
+      {/* Orders Table or Empty State */}
       <div className="listings-table-card">
-        <div className="table-responsive">
-          <table className="seller-table aligned-middle">
-            <thead>
-              <tr>
-                <th style={{ width: '15%' }}>Order ID</th>
-                <th style={{ width: '35%' }}>Item</th>
-                <th style={{ width: '18%' }}>Buyer Info</th>
-                <th style={{ width: '12%' }}>Total Price</th>
-                <th style={{ width: '10%' }}>Date</th>
-                <th style={{ width: '8%' }}>Status</th>
-                <th style={{ width: '2%', textAlign: 'right' }}>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(order => (
-                <tr key={order.id}>
-                  <td><span className="order-id-label">{order.id}</span></td>
-                  <td>
-                    <div className="product-cell">
-                      <div className="product-thumbnail">
-                        <img src={order.image} alt={order.title} />
-                      </div>
-                      <div className="product-details">
-                        <span className="product-title">{order.title}</span>
-                        <span className="product-subtitle">{order.details}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="buyer-cell">
-                      <span className="buyer-name">{order.buyerName}</span>
-                      <span className="buyer-location">{order.buyerLocation}</span>
-                    </div>
-                  </td>
-                  <td className="price-cell"><strong>${order.price.toFixed(2)}</strong></td>
-                  <td className="date-cell">{order.date}</td>
-                  <td>
-                    <span className={`status-pill ${
-                      order.status === 'Delivered' ? 'complete-delivery' :
-                      order.status === 'In Transit' ? 'transit-delivery' : 'pending-delivery'
-                    }`}>
-                      {order.status}
-                    </span>
-                  </td>
-                  <td style={{ textAlign: 'right' }}>
-                    <button className="action-icon-btn more-btn">
-                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
-                        <circle cx="12" cy="5" r="1" />
-                        <circle cx="12" cy="12" r="1" />
-                        <circle cx="12" cy="19" r="1" />
-                      </svg>
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="table-footer-pagination">
-          <span className="showing-indicator">Showing 1-{filtered.length} of 142 orders</span>
-          <div className="pagination-controls">
-            <button className="pagination-btn arrow-btn" disabled>&lt;</button>
-            <button className="pagination-btn active">1</button>
-            <button className="pagination-btn">2</button>
-            <button className="pagination-btn">3</button>
-            <button className="pagination-btn arrow-btn">&gt;</button>
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '60px 24px', color: '#64748b' }}>
+            <div style={{ width: '28px', height: '28px', border: '3px solid #cbd5e1', borderTopColor: '#c19358', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px auto' }} />
+            <p style={{ margin: 0, fontWeight: '600', fontSize: '14px' }}>Loading order history…</p>
           </div>
-        </div>
+        ) : filtered.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '60px 24px', color: '#64748b' }}>
+            <div style={{ fontSize: '44px', marginBottom: '12px' }}>📦</div>
+            <h3 style={{ margin: '0 0 6px 0', fontSize: '18px', color: '#0f172a', fontWeight: '700' }}>No Orders Found</h3>
+            <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>
+              {allOrders.length === 0
+                ? 'When buyers purchase your listed items, completed and pending sales will appear here.'
+                : 'No sales match your search filter.'}
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="table-responsive">
+              <table className="seller-table aligned-middle">
+                <thead>
+                  <tr>
+                    <th style={{ width: '15%' }}>Order ID</th>
+                    <th style={{ width: '35%' }}>Item</th>
+                    <th style={{ width: '18%' }}>Buyer Info</th>
+                    <th style={{ width: '14%' }}>Total Price</th>
+                    <th style={{ width: '10%' }}>Date</th>
+                    <th style={{ width: '8%' }}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map(order => (
+                    <tr key={order.id}>
+                      <td><span className="order-id-label">{order.id}</span></td>
+                      <td>
+                        <div className="product-cell">
+                          <div className="product-thumbnail">
+                            <img src={order.image} alt={order.title} />
+                          </div>
+                          <div className="product-details">
+                            <span className="product-title">{order.title}</span>
+                            <span className="product-subtitle">{order.details}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="buyer-cell">
+                          <span className="buyer-name">{order.buyerName}</span>
+                          <span className="buyer-location">{order.buyerLocation}</span>
+                        </div>
+                      </td>
+                      <td className="price-cell"><strong>PKR {order.price.toLocaleString()}</strong></td>
+                      <td className="date-cell">{order.date}</td>
+                      <td>
+                        <span className={`status-pill ${
+                          order.status === 'Delivered' || order.status === 'Confirmed' ? 'complete-delivery' :
+                          order.status === 'In Transit' ? 'transit-delivery' : 'pending-delivery'
+                        }`}>
+                          {order.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="table-footer-pagination">
+              <span className="showing-indicator">Showing 1-{filtered.length} of {allOrders.length} orders</span>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Sustainability Tip */}

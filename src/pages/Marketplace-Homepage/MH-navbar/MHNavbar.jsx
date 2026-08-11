@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { useTheme } from '../../../context/ThemeContext';
 import { useListings } from '../../../context/ListingsContext';
+import { useChat } from '../../../hooks/useChat';
 import EditProfile from '../../../pages/EditProfile/EditProfile';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import './MHNavbar.css';
@@ -19,10 +20,12 @@ const MHNavbar = () => {
   const { user, profile, logout, switchMode } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
   const { notifications, markNotificationRead, markAllNotificationsRead } = useListings();
+  const { conversations } = useChat();
 
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
 
   const unreadCount = notifications ? notifications.filter(n => !n.read).length : 0;
+  const unreadChatCount = (conversations || []).reduce((acc, c) => acc + (c.unreadCount || 0), 0);
 
   // Persistent Admin role check
   const isAdmin = profile?.role === 'admin' || user?.user_metadata?.role === 'admin' || localStorage.getItem('userRole') === 'admin';
@@ -126,8 +129,14 @@ const MHNavbar = () => {
                 <Link to="/saved">Saved</Link>
                 {currentPath === '/saved' && <span className="mh-active-indicator"></span>}
               </li>
-              <li className={`mh-nav-item ${currentPath.startsWith('/chat') ? 'active' : ''}`}>
+              <li className={`mh-nav-item ${currentPath.startsWith('/chat') ? 'active' : ''}`} style={{ position: 'relative' }}>
                 <Link to="/chat">Chat</Link>
+                {unreadChatCount > 0 && (
+                  <span style={{
+                    display: 'inline-block', width: '8px', height: '8px', background: '#ef4444',
+                    borderRadius: '50%', marginLeft: '4px', verticalAlign: 'middle'
+                  }} />
+                )}
                 {currentPath.startsWith('/chat') && <span className="mh-active-indicator"></span>}
               </li>
               <li className={`mh-nav-item ${currentPath.startsWith('/order-history') ? 'active' : ''}`}>
@@ -161,11 +170,22 @@ const MHNavbar = () => {
                 )}
               </button>
 
-              <button className="mh-icon-btn" aria-label="Messages" onClick={() => navigate('/chat')}>
+              <button className="mh-icon-btn" aria-label="Messages" onClick={() => navigate('/chat')} style={{ position: 'relative' }}>
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
                   <polyline points="22,6 12,13 2,6"></polyline>
                 </svg>
+                {unreadChatCount > 0 && (
+                  <span style={{
+                    position: 'absolute', top: '2px', right: '2px',
+                    minWidth: '16px', height: '16px', background: '#ef4444',
+                    borderRadius: '50%', fontSize: '9px', fontWeight: '700',
+                    color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    lineHeight: 1, padding: '0 2px'
+                  }}>
+                    {unreadChatCount > 9 ? '9+' : unreadChatCount}
+                  </span>
+                )}
               </button>
 
               {/* Cart Icon */}
