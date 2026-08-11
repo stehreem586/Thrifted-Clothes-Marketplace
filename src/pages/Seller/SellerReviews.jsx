@@ -1,46 +1,140 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useListings } from '../../context/ListingsContext';
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../utils/supabaseClient';
 import './SellerReviews.css';
 
 export default function SellerReviews() {
-  const { reviews, listings, addSellerReviewReply } = useListings();
+  const { reviews: contextReviews, listings, addSellerReviewReply } = useListings();
+  const { user } = useAuth();
+  const [dbReviews, setDbReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedListingId, setSelectedListingId] = useState('ALL');
-  const [sortBy, setSortBy] = useState('latest'); // 'latest' | 'highest' | 'lowest'
+  const [sortBy, setSortBy] = useState('latest');
   const [replyingReviewId, setReplyingReviewId] = useState(null);
   const [replyText, setReplyText] = useState('');
 
+  // Fetch real seller reviews from Supabase
+  useEffect(() => {
+    const fetchReviews = async () => {
+      if (!user?.id) {
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      try {
+        const { data: rawReviews, error } = await supabase
+          .from('reviews')
+          .select('*, listings(id, title, image_url), profiles!reviews_buyer_id_fkey(id, name, avatar_url)')
+          .eq('seller_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (!error && rawReviews) {
+          const mapped = rawReviews.map(r => {
+            const listing = r.listings || {};
+            const buyer = r.profiles || {};
+            const buyerName = buyer.name || 'Verified Buyer';
+
+            return {
+              id: r.id ? String(r.id) : `db-rev-${Date.now()}`,
+              listingId: r.listing_id || listing.id,
+              customerName: buyerName,
+              customerAvatar: buyer.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(buyerName)}&background=1a1a2e&color=fff&size=100`,
+              listingImage: listing.image_url || 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400&q=80',
+              listingTitle: listing.title || 'Marketplace Item',
+              rating: parseInt(r.rating) || 5,
+              comment: r.comment || 'Great quality thrift item, fast delivery!',
+              date: r.created_at ? new Date(r.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+              reply: r.reply_text ? { text: r.reply_text, date: r.reply_date || new Date().toISOString().split('T')[0] } : null
+            };
+          });
+          setDbReviews(mapped);
+        }
+      } catch (err) {
+        console.warn('SellerReviews fetch notice:', err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReviews();
+  }, [user]);
+
+  // Merge Supabase reviews with context reviews
+  const allReviews = useMemo(() => {
+    const map = new Map();
+    dbReviews.forEach(r => map.set(String(r.id), r));
+
+    (contextReviews || []).forEach(r => {
+      const custName = r.customerName || r.buyerName || 'Verified Buyer';
+      const custAvatar = r.customerAvatar || r.buyerAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(custName)}&background=1a1a2e&color=fff&size=100`;
+      const prodImg = r.listingImage || r.image_url || r.image || 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400&q=80';
+      const prodTitle = r.listingTitle || r.title || 'Marketplace Item';
+
+      map.set(String(r.id), {
+        id: String(r.id),
+        listingId: r.listingId,
+        customerName: custName,
+        customerAvatar: custAvatar,
+        listingImage: prodImg,
+        listingTitle: prodTitle,
+        rating: parseInt(r.rating) || 5,
+        comment: r.comment || '',
+        date: r.date || new Date().toISOString().split('T')[0],
+        reply: r.reply || null
+      });
+    });
+
+    return Array.from(map.values());
+  }, [dbReviews, contextReviews]);
+
   // Listing filter logic
-  const filteredReviews = reviews.filter(rev => {
-    if (selectedListingId !== 'ALL' && String(rev.listingId) !== String(selectedListingId)) {
-      return false;
-    }
-    return true;
-  });
+  const filteredReviews = useMemo(() => {
+    return allReviews.filter(rev => {
+      if (selectedListingId !== 'ALL' && String(rev.listingId) !== String(selectedListingId)) {
+        return false;
+      }
+      return true;
+    });
+  }, [allReviews, selectedListingId]);
 
   // Sort logic
-  const sortedReviews = [...filteredReviews].sort((a, b) => {
-    if (sortBy === 'latest') return new Date(b.date) - new Date(a.date);
-    if (sortBy === 'highest') return b.rating - a.rating;
-    if (sortBy === 'lowest') return a.rating - b.rating;
-    return 0;
-  });
+  const sortedReviews = useMemo(() => {
+    return [...filteredReviews].sort((a, b) => {
+      if (sortBy === 'latest') return new Date(b.date) - new Date(a.date);
+      if (sortBy === 'highest') return b.rating - a.rating;
+      if (sortBy === 'lowest') return a.rating - b.rating;
+      return 0;
+    });
+  }, [filteredReviews, sortBy]);
 
   // Metric stats
-  const totalReviewsCount = reviews.length;
+  const totalReviewsCount = allReviews.length;
   const avgRating = totalReviewsCount > 0
-    ? (reviews.reduce((sum, r) => sum + r.rating, 0) / totalReviewsCount).toFixed(1)
+    ? (allReviews.reduce((sum, r) => sum + r.rating, 0) / totalReviewsCount).toFixed(1)
     : 'NA';
-  const pendingRepliesCount = reviews.filter(r => !r.reply).length;
+  const pendingRepliesCount = allReviews.filter(r => !r.reply).length;
 
   const handleOpenReplyModal = (review) => {
     setReplyingReviewId(review.id);
     setReplyText(review.reply ? review.reply.text : '');
   };
 
-  const handleSendReplySubmit = (e) => {
+  const handleSendReplySubmit = async (e) => {
     e.preventDefault();
     if (!replyText.trim() || !replyingReviewId) return;
+
+    // 1. Optimistic context update
     addSellerReviewReply(replyingReviewId, replyText.trim());
+
+    // 2. Persist to Supabase if it's a real DB review ID
+    try {
+      await supabase.from('reviews').update({
+        reply_text: replyText.trim(),
+        reply_date: new Date().toISOString().split('T')[0]
+      }).eq('id', replyingReviewId);
+    } catch (_) {}
+
     setReplyingReviewId(null);
     setReplyText('');
   };
@@ -122,7 +216,12 @@ export default function SellerReviews() {
 
       {/* Reviews List */}
       <div className="reviews-list">
-        {sortedReviews.length === 0 ? (
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '60px', color: '#64748b' }}>
+            <div style={{ width: '28px', height: '28px', border: '3px solid #cbd5e1', borderTopColor: '#c19358', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px auto' }} />
+            <p style={{ margin: 0, fontWeight: '600', fontSize: '14px' }}>Loading reviews…</p>
+          </div>
+        ) : sortedReviews.length === 0 ? (
           <div className="reviews-empty-card">
             <div className="empty-icon">⭐</div>
             <h3>No Reviews Found</h3>
@@ -142,8 +241,8 @@ export default function SellerReviews() {
                 </div>
 
                 <div className="rating-stars">
-                  {'★'.repeat(rev.rating)}
-                  {'☆'.repeat(5 - rev.rating)}
+                  {'★'.repeat(Math.min(5, Math.max(1, rev.rating)))}
+                  {'☆'.repeat(Math.max(0, 5 - Math.min(5, Math.max(1, rev.rating))))}
                   <span className="rating-num">({rev.rating}.0)</span>
                 </div>
               </div>

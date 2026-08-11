@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import ProductCard from '../../components/ProductCard/ProductCard';
 import { useAuth } from '../../context/AuthContext';
@@ -38,6 +38,7 @@ const Product = () => {
 
   // Seller phone-reveal state (origin/main addition)
   const [sellerProfile, setSellerProfile] = useState(null);
+  const viewedIdRef = useRef(null);
 
   // Fetch listing and seller details from Supabase if id is a UUID, else fallback to dummy data
   useEffect(() => {
@@ -153,7 +154,7 @@ const Product = () => {
     };
 
     fetchProductData();
-  }, [id, allMarketplaceProducts]);
+  }, [id]);
 
   // Load saved listing IDs and check if currently wishlisted
   useEffect(() => {
@@ -212,8 +213,9 @@ const Product = () => {
       setWishlisted(!!currentProduct.wishlisted);
     }
 
-    // origin/main: track a view each time the product changes
-    if (id && incrementViews) {
+    // origin/main: track a view once per product change
+    if (id && incrementViews && viewedIdRef.current !== id) {
+      viewedIdRef.current = id;
       incrementViews(id);
     }
   }, [id, currentProduct]);
@@ -416,7 +418,7 @@ const Product = () => {
     { id: 4, name: 'Hem Detail', transform: 'scale(1.6)', transformOrigin: 'center 85%' }
   ];
 
-  const handleChatClick = async () => {
+  const handleChatClick = () => {
     if (!user) {
       if (window.confirm("You must be logged in to chat with the seller. Would you like to log in now?")) {
         navigate('/login', { state: { from: `/product/${id}` } });
@@ -424,68 +426,22 @@ const Product = () => {
       return;
     }
 
-    try {
-      const getSellerId = (product) => {
-        if (product.seller?.id) return product.seller.id;
-        if (product.seller?.name) {
-          return 'mock-seller-' + product.seller.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
-        }
-        return 'mock-seller-unknown';
-      };
-
-      const buyerId = user.id;
-      const sellerId = getSellerId(currentProduct);
-      const listingId = String(currentProduct.id);
-
-      // Check Firestore for existing chat: WHERE listing_id = X AND participants includes current user
-      const chatsRef = collection(db, 'chats');
-      const q = query(
-        chatsRef,
-        where('listing_id', '==', listingId),
-        where('participants', 'array-contains', buyerId)
-      );
-
-      const querySnapshot = await getDocs(q);
-      let chatId = null;
-
-      // Filter on the client side to verify participants includes the seller
-      querySnapshot.forEach((docSnap) => {
-        const data = docSnap.data();
-        if (data.participants && data.participants.includes(sellerId)) {
-          chatId = docSnap.id;
-        }
-      });
-
-      if (!chatId) {
-        // If no chat exists: create new document in chats collection
-        const newChat = {
-          participants: [buyerId, sellerId],
-          listing_id: listingId,
-          created_at: new Date().toISOString(),
-          buyer_id: buyerId,
-          buyer_name: profile?.name || user.email?.split('@')[0] || 'Interested Buyer',
-          buyer_avatar: profile?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80',
-          seller_id: sellerId,
-          seller_name: currentProduct.seller?.name || 'Seller',
-          seller_avatar: sellerInfo.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80',
-          product_title: currentProduct.title,
-          product_price: currentProduct.price,
-          product_image: currentProduct.image,
-          product_category: currentProduct.category || 'Vintage',
-          last_message: '',
-          last_message_time: new Date().toISOString()
-        };
-
-        const docRef = await addDoc(chatsRef, newChat);
-        chatId = docRef.id;
-      }
-
-      // Immediately open the chat conversation screen
-      navigate('/chat', { state: { activeChatId: chatId } });
-    } catch (error) {
-      console.error("Error starting chat:", error);
-      alert("Failed to start chat. Please try again.");
+    const sellerId = currentProduct?.seller?.id || currentProduct?.seller_id;
+    if (!sellerId) {
+      alert("Seller information is not available for this listing.");
+      return;
     }
+    if (user.id === sellerId) {
+      alert("This is your own product listing.");
+      return;
+    }
+
+    const cleanId = id.startsWith('seller-') ? id.replace('seller-', '') : id;
+    const title = currentProduct?.title || '';
+    const price = currentProduct?.price || '';
+    const image = currentProduct?.image || currentProduct?.images?.[0] || currentProduct?.image_url || '';
+
+    navigate(`/chat?sellerId=${encodeURIComponent(sellerId)}&listingId=${encodeURIComponent(cleanId)}&title=${encodeURIComponent(title)}&price=${encodeURIComponent(price)}&image=${encodeURIComponent(image)}`);
   };
 
   const handleBuyNow = () => {

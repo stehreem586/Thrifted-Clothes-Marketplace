@@ -5,8 +5,9 @@ import './ChatSidebar.css';
 const ChatSidebar = ({ conversations, activeId, onSelectConversation }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredConversations = conversations.filter(c =>
-    c.user.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const safeConversations = Array.isArray(conversations) ? conversations : [];
+  const filteredConversations = safeConversations.filter(c =>
+    (c?.user?.name || 'User').toLowerCase().includes((searchQuery || '').toLowerCase())
   );
 
   return (

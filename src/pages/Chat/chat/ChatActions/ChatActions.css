@@ -1,23 +1,74 @@
 .chat-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 6px;
 }
 
-.action-icon-btn {
+.chat-action-btn {
   background: none;
   border: none;
   padding: 8px;
-  color: #636366;
+  color: #64748b;
   cursor: pointer;
-  border-radius: 50%;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: all 0.18s ease;
 }
 
-.action-icon-btn:hover {
-  background-color: #f2f2f7;
-  color: #1c1c1e;
+.chat-action-btn:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+.chat-more-wrapper {
+  position: relative;
+}
+
+.chat-more-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+  min-width: 170px;
+  z-index: 999;
+  overflow: hidden;
+  animation: dropFadeIn 0.15s ease;
+}
+
+@keyframes dropFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.chat-more-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 11px 16px;
+  border: none;
+  background: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: #0f172a;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.chat-more-item:hover {
+  background: #f8fafc;
+}
+
+.chat-more-item.danger {
+  color: #dc2626;
+}
+
+.chat-more-item.danger:hover {
+  background: #fef2f2;
 }

@@ -28,16 +28,49 @@ const Chat = () => {
   } = useChat();
 
   // Deep-link support: /chat?sellerId=...&listingId=... opens/creates that chat.
-  // Must be logged in to start a chat — this route is already behind
-  // ProtectedRoute, so a guest is redirected to login before reaching here.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const sellerId = params.get('sellerId');
     const listingId = params.get('listingId');
+    const title = params.get('title');
+    const price = params.get('price');
+    const image = params.get('image');
+
     if (sellerId && user) {
-      startChatWithSeller(sellerId, listingId || null);
+      if (sellerId === user.id) {
+        return;
+      }
+      const listingMeta = title ? { title, price, image } : null;
+      startChatWithSeller(sellerId, listingId || null, listingMeta);
     }
   }, [user, startChatWithSeller]);
+
+  // Buyer conversations: only chats where I am the buyer, not the seller
+  const buyerConversations = (conversations || []).filter(
+    (c) => c.buyer_id === user?.id && c.seller_id !== user?.id
+  );
+
+  // Include pending chat at top of sidebar
+  const sidebarConversations = activeConversationId === '__pending__' && activeConversation
+    ? [activeConversation, ...buyerConversations]
+    : buyerConversations;
+
+  // Inline active ID — no useEffect needed, eliminates first-click flicker
+  const effectiveActiveId = activeConversationId
+    || (buyerConversations.length > 0 ? buyerConversations[0].id : null);
+
+  // Sync into hook state if it was null
+  useEffect(() => {
+    if (!activeConversationId && buyerConversations.length > 0) {
+      setActiveConversationId(buyerConversations[0].id);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [buyerConversations.length]);
+
+  // Use the conversation matching effectiveActiveId for display
+  const displayConversation = activeConversationId === '__pending__'
+    ? activeConversation
+    : (conversations.find((c) => c.id === effectiveActiveId) || null);
 
   const handleSendMessage = async (text) => {
     const violation = scanTextForViolations(text);
@@ -56,10 +89,6 @@ const Chat = () => {
     }
   };
 
-  const handleMakeOffer = () => {
-    alert(`Offer made on ${activeConversation.product.title}!`);
-  };
-
   const handleBlockToggle = async () => {
     if (!user || !activeConversation?.otherUserId) return;
     if (activeIsBlocked) {
@@ -70,9 +99,13 @@ const Chat = () => {
       );
       if (!confirmed) return;
       await blockUser({ blockerId: user.id, blockedId: activeConversation.otherUserId });
-      alert('You have blocked this user. They can no longer message you.');
+      alert('You have blocked this seller. They can no longer message you.');
     }
   };
+
+  // My real avatar
+  const myAvatar = profile?.avatar_url
+    || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile?.name || user?.email || 'Me')}&background=c19358&color=fff&size=100`;
 
   return (
     <div className="chat-page-wrapper">
@@ -80,7 +113,7 @@ const Chat = () => {
         <ReportModal
           isOpen={showReportModal}
           onClose={() => setShowReportModal(false)}
-          targetType="User / Chat Partner"
+          targetType="Seller"
           targetUser={activeConversation.user}
           targetListing={activeConversation.product}
         />
@@ -88,32 +121,36 @@ const Chat = () => {
 
       <div className="chat-container-box">
         <ChatSidebar
-          conversations={conversations}
+          conversations={sidebarConversations}
           activeId={activeConversationId}
           onSelectConversation={setActiveConversationId}
         />
-        <div className="chat-window">
-          {activeConversation ? (
+        <div className="chat-window" style={{ overflow: 'hidden' }}>
+          {displayConversation ? (
             <>
               <ChatHeader
-                user={activeConversation.user}
-                onCall={() => alert('Voice call feature is coming soon!')}
-                onVideo={() => alert('Video call feature is coming soon!')}
+                user={displayConversation.user}
                 onReport={() => setShowReportModal(true)}
                 onMore={handleBlockToggle}
+                moreLabel={activeIsBlocked ? 'Unblock Seller' : 'Block Seller'}
               />
-              <ProductCard
-                product={activeConversation.product}
-                onMakeOffer={handleMakeOffer}
-              />
+              {displayConversation.product && (
+                <ProductCard
+                  product={displayConversation.product}
+                  onMakeOffer={null}
+                />
+              )}
               <MessageList
-                messages={activeConversation.messages}
+                messages={displayConversation.messages}
                 showTyping={false}
                 onScrollTop={loadMoreMessages}
+                myAvatar={myAvatar}
+                otherAvatar={displayConversation.user?.avatar}
+                otherName={displayConversation.user?.name}
               />
               {activeIsBlocked ? (
-                <div style={{ padding: '16px', textAlign: 'center', color: '#888', fontSize: '14px' }}>
-                  You can't message this user right now.
+                <div style={{ padding: '16px', textAlign: 'center', color: '#888', fontSize: '14px', flexShrink: 0 }}>
+                  You have blocked this seller. You can't message them.
                 </div>
               ) : (
                 <ChatInput onSendMessage={handleSendMessage} />
@@ -121,8 +158,11 @@ const Chat = () => {
             </>
           ) : (
             <div className="no-chat-selected">
-              <h3>Select a message thread</h3>
-              <p>Choose a conversation from the list to start chatting.</p>
+              <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#cbd5e1" strokeWidth="1.5">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+              <h3>Your Messages</h3>
+              <p>Click "Chat with Seller" on any listing to start a conversation.</p>
             </div>
           )}
         </div>

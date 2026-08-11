@@ -176,6 +176,10 @@ function SellerPublicProfile() {
       setShowLoginModal(true);
       return;
     }
+    if (user.id === profileData.id) {
+      alert("This is your own store profile.");
+      return;
+    }
     navigate(`/chat?sellerId=${profileData.id}&name=${encodeURIComponent(profileData.name)}&avatar=${encodeURIComponent(profileData.avatar_url || '')}`);
   };
 

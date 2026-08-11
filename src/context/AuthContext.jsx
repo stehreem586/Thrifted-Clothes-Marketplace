@@ -76,11 +76,14 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    let active = true;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!active) return;
+      
       if (session) {
         setUser(session.user);
 
-        // Seed Google data if this is a Google user
         const provider = session.user.app_metadata?.provider;
         if (provider === 'google') {
           await seedGoogleProfile(session.user);
@@ -91,14 +94,15 @@ export const AuthProvider = ({ children }) => {
         if (localProfStr) {
           try {
             const localProf = JSON.parse(localProfStr);
-            // NEVER let localStorage override the role from DB — DB is source of truth
             const { role: _ignored, ...localProfWithoutRole } = localProf;
             prof = { ...(prof || {}), ...localProfWithoutRole };
           } catch(e) {}
         }
-        setProfile(prof);
-        // Always persist the real DB role to localStorage
-        if (prof?.role) localStorage.setItem('userRole', prof.role);
+
+        if (active) {
+          setProfile(prof);
+          if (prof?.role) localStorage.setItem('userRole', prof.role);
+        }
 
         // Stay-signed-in logic
         const staySignedIn = localStorage.getItem('staySignedIn');
@@ -106,44 +110,30 @@ export const AuthProvider = ({ children }) => {
           const sessionAlive = sessionStorage.getItem('sessionAlive');
           if (!sessionAlive) {
             await supabase.auth.signOut();
-            setUser(null);
-            setProfile(null);
-            localStorage.removeItem('userRole');
-            localStorage.removeItem('staySignedIn');
-            setLoading(false);
+            if (active) {
+              setUser(null);
+              setProfile(null);
+              localStorage.removeItem('userRole');
+              localStorage.removeItem('staySignedIn');
+              setLoading(false);
+            }
             return;
           }
         }
       } else {
-        setUser(null);
-        setProfile(null);
-        localStorage.removeItem('userRole');
-      }
-      setLoading(false);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setLoading(true);
-      if (session) {
-        setUser(session.user);
-
-        const provider = session.user.app_metadata?.provider;
-        if (provider === 'google') {
-          await seedGoogleProfile(session.user);
+        if (active) {
+          setUser(null);
+          setProfile(null);
+          localStorage.removeItem('userRole');
         }
-
-        const prof = await fetchProfile(session.user.id);
-        setProfile(prof);
-        if (prof) localStorage.setItem('userRole', prof.role);
-      } else {
-        setUser(null);
-        setProfile(null);
-        localStorage.removeItem('userRole');
       }
-      setLoading(false);
+      if (active) setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email, password, staySignedIn = true) => {

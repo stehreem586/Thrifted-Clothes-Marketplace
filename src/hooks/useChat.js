@@ -4,69 +4,108 @@ import * as chatService from '../utils/chatService';
 import { isBlocked as checkIsBlocked } from '../utils/blockService';
 import { supabase } from '../utils/supabaseClient';
 
-const FALLBACK_AVATAR = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80';
+const makeAvatar = (name) =>
+  `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'User')}&background=1a1a2e&color=fff&size=100`;
 
-const formatTime = (ts) => {
-  const date = ts?.toDate ? ts.toDate() : new Date();
+const formatTime = (ts, fallbackMs) => {
+  let date = new Date();
+  if (ts?.toDate) {
+    date = ts.toDate();
+  } else if (fallbackMs) {
+    date = new Date(fallbackMs);
+  }
   return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 };
 
 const toUiMessage = (row, currentUserId) => ({
   id: row.id,
   text: row.text,
-  time: formatTime(row.timestamp),
+  time: formatTime(row.timestamp, row.created_at),
   sender: row.sender_id === currentUserId ? 'me' : 'them',
   _snap: row._snap,
 });
 
 async function attachOtherUserProfile(chat, currentUserId) {
-  const otherId = chat.participants.find((id) => id !== currentUserId);
+  const otherId = chat.participants?.find((id) => id !== currentUserId);
   let otherUser = null;
   let listing = null;
 
-  if (otherId) {
-    const { data } = await supabase.from('profiles').select('id, name, avatar_url').eq('id', otherId).maybeSingle();
-    otherUser = data;
+  try {
+    if (otherId) {
+      const { data } = await supabase.from('profiles').select('id, name, avatar_url').eq('id', otherId).maybeSingle();
+      otherUser = data;
+    }
+  } catch (e) {
+    console.warn('Supabase profile fetch error:', e);
   }
-  if (chat.listing_id) {
-    const { data } = await supabase
-      .from('listings')
-      .select('id, title, brand, price, image_url')
-      .eq('id', chat.listing_id)
-      .maybeSingle();
-    listing = data;
+
+  try {
+    if (chat.listing_title) {
+      listing = {
+        id: chat.listing_id,
+        title: chat.listing_title,
+        price: chat.listing_price,
+        image_url: chat.listing_image,
+        brand: 'SELLER LISTING',
+      };
+    } else if (chat.listing_id) {
+      const { data } = await supabase
+        .from('listings')
+        .select('id, title, brand, price, image_url')
+        .eq('id', chat.listing_id)
+        .maybeSingle();
+      listing = data;
+    }
+  } catch (e) {
+    console.warn('Supabase listing fetch error:', e);
   }
 
   return { ...chat, otherUser, listing, otherId };
 }
 
-const toUiConversation = (chat, currentUserId, previousMessages = []) => ({
-  id: chat.id,
-  user: {
-    name: chat.otherUser?.name || 'User',
-    avatar: chat.otherUser?.avatar_url || FALLBACK_AVATAR,
-    online: false,
-  },
-  lastMessageText: chat.last_message || 'Say hello 👋',
-  lastMessageTime: chat.last_message_at ? formatTime(chat.last_message_at) : '',
-  unreadCount: chat.unreadCounts?.[currentUserId] || 0,
-  product: chat.listing
-    ? {
-        brand: chat.listing.brand || '',
-        title: chat.listing.title,
-        price: chat.listing.price,
-        image: chat.listing.image_url,
-      }
-    : { brand: 'SELLER SHOP', title: 'General Inquiry', price: '', image: chat.otherUser?.avatar_url || FALLBACK_AVATAR },
-  messages: previousMessages,
-  buyer_id: chat.buyer_id,
-  seller_id: chat.seller_id,
-  otherUserId: chat.otherId,
-});
+const toUiConversation = (chat, currentUserId, previousMessages = []) => {
+  const isMeBuyer = chat.buyer_id === currentUserId;
+  const otherName = chat.otherUser?.name
+    || (isMeBuyer ? (chat.seller_name || 'Seller Store') : (chat.buyer_name || 'Buyer'))
+    || 'User';
+  const rawAvatar = chat.otherUser?.avatar_url
+    || (isMeBuyer ? chat.seller_avatar : chat.buyer_avatar);
+  const otherAvatar = rawAvatar || makeAvatar(otherName);
+
+  return {
+    id: chat.id,
+    user: {
+      name: otherName,
+      avatar: otherAvatar,
+      online: false,
+    },
+    lastMessageText: chat.last_message || '',
+    lastMessageTime: chat.last_message_at ? formatTime(chat.last_message_at) : '',
+    unreadCount: chat.unreadCounts?.[currentUserId] || 0,
+    product: chat.listing
+      ? {
+          brand: chat.listing.brand || 'VINTAGE',
+          title: chat.listing.title,
+          price: chat.listing.price,
+          image: chat.listing.image_url || chat.listing.image,
+        }
+      : (chat.listing_title ? {
+          brand: 'VINTAGE',
+          title: chat.listing_title,
+          price: chat.listing_price,
+          image: chat.listing_image,
+        } : null),
+    messages: previousMessages,
+    buyer_id: chat.buyer_id,
+    seller_id: chat.seller_id,
+    otherUserId: chat.otherId,
+  };
+};
 
 /**
- * Real-time chat backed by Firebase Firestore. Returns the same shape the
- * Chat UI already expects, so no component markup changes.
+ * Real-time chat hook.
+ * - startChatWithSeller: stores a local "pending" chat — NO Firestore write
+ * - sendMessage: on first message in a pending chat, creates the Firestore doc then sends
  */
 export function useChat() {
   const { user } = useAuth();
@@ -76,27 +115,54 @@ export function useChat() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
 
+  // Pending chat: shown in UI before any message is sent (no Firestore doc yet)
+  const [pendingChat, setPendingChat] = useState(null);
+  // pendingChat shape: { sellerId, listingId, listingMeta, sellerMeta, buyerMeta, virtualConv }
+
+  const PENDING_ID = '__pending__';
+
   const messageUnsubRef = useRef(null);
   const conversationsRef = useRef(conversations);
   useEffect(() => { conversationsRef.current = conversations; }, [conversations]);
 
-  // Live chat list
+  // Live chat list from Firestore
   useEffect(() => {
     if (!user) return;
 
     const unsub = chatService.subscribeToUserChats(user.id, async (rawChats) => {
-      const prevMessagesById = new Map(conversationsRef.current.map((c) => [c.id, c.messages]));
-      const enriched = await Promise.all(rawChats.map((c) => attachOtherUserProfile(c, user.id)));
-      setConversations(enriched.map((c) => toUiConversation(c, user.id, prevMessagesById.get(c.id) || [])));
-      setActiveConversationId((prevId) => prevId ?? (enriched[0]?.id || null));
+      try {
+        // Keep all valid chats (no self-chats)
+        const validChats = (rawChats || []).filter(
+          (c) => !(c.buyer_id && c.seller_id && c.buyer_id === c.seller_id)
+        );
+        const prevMessagesById = new Map(conversationsRef.current.map((c) => [c.id, c.messages]));
+        const enriched = await Promise.all(validChats.map((c) => attachOtherUserProfile(c, user.id)));
+        const mapped = enriched.map((c) => toUiConversation(c, user.id, prevMessagesById.get(c.id) || []));
+        setConversations(mapped);
+
+        // If active conversation is now in real list, clear pending
+        if (activeConversationId === PENDING_ID) {
+          // find the newly created real chat matching the pending one
+          const newReal = mapped.find(
+            (c) => c.buyer_id === user.id && pendingChat && c.seller_id === pendingChat.sellerId
+          );
+          if (newReal) {
+            setActiveConversationId(newReal.id);
+            setPendingChat(null);
+          }
+        }
+      } catch (err) {
+        console.error('Error processing live chats:', err);
+      }
     });
 
     return unsub;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  // Messages + realtime subscription for the open chat
+  // Messages + realtime for open real chat
   useEffect(() => {
-    if (!activeConversationId || !user) return;
+    if (!activeConversationId || activeConversationId === PENDING_ID || !user) return;
     messageUnsubRef.current?.();
     chatService.markChatRead(activeConversationId, user.id).catch(() => {});
 
@@ -118,8 +184,8 @@ export function useChat() {
       setConversations((prev) =>
         prev.map((c) => {
           if (c.id !== activeConversationId) return c;
-          if (c.messages.some((m) => m.id === row.id)) return c;
-          return { ...c, messages: [...c.messages, toUiMessage(row, user.id)] };
+          if ((c.messages || []).some((m) => m.id === row.id)) return c;
+          return { ...c, messages: [...(c.messages || []), toUiMessage(row, user.id)] };
         })
       );
       if (row.sender_id !== user.id) {
@@ -132,7 +198,7 @@ export function useChat() {
 
   const loadMoreMessages = useCallback(async () => {
     const conv = conversationsRef.current.find((c) => c.id === activeConversationId);
-    if (!conv || !conv.messages.length || loadingMore || !hasMore) return;
+    if (!conv || !(conv.messages || []).length || loadingMore || !hasMore) return;
 
     setLoadingMore(true);
     try {
@@ -143,7 +209,7 @@ export function useChat() {
       setConversations((prev) =>
         prev.map((c) =>
           c.id === activeConversationId
-            ? { ...c, messages: [...older.map((r) => toUiMessage(r, user.id)), ...c.messages] }
+            ? { ...c, messages: [...older.map((r) => toUiMessage(r, user.id)), ...(c.messages || [])] }
             : c
         )
       );
@@ -153,25 +219,118 @@ export function useChat() {
   }, [activeConversationId, loadingMore, hasMore, user]);
 
   const sendMessage = useCallback(async (text) => {
-    if (!activeConversationId || !user || activeIsBlocked) return;
+    if (!user || activeIsBlocked) return;
+    const trimmed = (text || '').trim();
+    if (!trimmed) return;
+
+    // Pending chat: create Firestore doc on first message
+    if (activeConversationId === PENDING_ID && pendingChat) {
+      const chat = await chatService.getOrCreateChat({
+        buyerId: user.id,
+        sellerId: pendingChat.sellerId,
+        listingId: pendingChat.listingId,
+        listingMeta: pendingChat.listingMeta,
+        buyerMeta: pendingChat.buyerMeta,
+        sellerMeta: pendingChat.sellerMeta,
+      });
+      // Send the message to the newly created chat
+      await chatService.sendMessage({
+        chatId: chat.id,
+        senderId: user.id,
+        recipientId: pendingChat.sellerId,
+        text: trimmed,
+      });
+      // Switch to real conversation — Firestore listener will pick it up
+      setActiveConversationId(chat.id);
+      setPendingChat(null);
+      return;
+    }
+
+    // Normal case: real existing chat
+    if (!activeConversationId) return;
     const conv = conversationsRef.current.find((c) => c.id === activeConversationId);
     if (!conv?.otherUserId) return;
     await chatService.sendMessage({
       chatId: activeConversationId,
       senderId: user.id,
       recipientId: conv.otherUserId,
-      text,
+      text: trimmed,
     });
-  }, [activeConversationId, user, activeIsBlocked]);
+  }, [activeConversationId, pendingChat, user, activeIsBlocked]);
 
-  const startChatWithSeller = useCallback(async (sellerId, listingId = null) => {
+  /**
+   * Called from "Chat with Seller" button.
+   * Does NOT write to Firestore — only sets up a local pending conversation.
+   * Firestore doc is created only when the user actually sends the first message.
+   */
+  const startChatWithSeller = useCallback(async (sellerId, listingId = null, listingMeta = null, sellerMeta = null) => {
     if (!user) return;
-    const chat = await chatService.getOrCreateChat({ buyerId: user.id, sellerId, listingId });
-    setActiveConversationId(chat.id);
+    if (user.id === sellerId) {
+      alert('This is your own product listing.');
+      return;
+    }
+
+    // Check if a real chat already exists with this seller+listing
+    const existing = conversationsRef.current.find(
+      (c) => c.buyer_id === user.id && c.seller_id === sellerId
+        && (listingId ? c.otherUserId === sellerId : true)
+    );
+    if (existing) {
+      setActiveConversationId(existing.id);
+      return;
+    }
+
+    // Fetch seller profile for display (no Firestore write)
+    let fetchedSellerMeta = sellerMeta;
+    if (!fetchedSellerMeta) {
+      try {
+        const { data } = await supabase.from('profiles').select('id, name, avatar_url').eq('id', sellerId).maybeSingle();
+        if (data) {
+          fetchedSellerMeta = { name: data.name, avatar: data.avatar_url };
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    const buyerMeta = {
+      name: user.user_metadata?.name || user.email?.split('@')[0] || 'Buyer',
+      avatar: makeAvatar(user.user_metadata?.name || user.email || 'B'),
+    };
+
+    const sellerName = fetchedSellerMeta?.name || 'Seller';
+    const sellerAvatar = fetchedSellerMeta?.avatar || makeAvatar(sellerName);
+
+    // Build a virtual conversation for display ONLY (not saved to Firestore)
+    const virtualConv = {
+      id: PENDING_ID,
+      user: { name: sellerName, avatar: sellerAvatar, online: false },
+      lastMessageText: '',
+      lastMessageTime: '',
+      unreadCount: 0,
+      product: listingMeta ? {
+        brand: 'VINTAGE',
+        title: listingMeta.title,
+        price: listingMeta.price,
+        image: listingMeta.image,
+      } : null,
+      messages: [],
+      buyer_id: user.id,
+      seller_id: sellerId,
+      otherUserId: sellerId,
+    };
+
+    setPendingChat({ sellerId, listingId, listingMeta, sellerMeta: fetchedSellerMeta, buyerMeta, virtualConv });
+    setActiveConversationId(PENDING_ID);
   }, [user]);
 
-  const activeConversation = conversations.find((c) => c.id === activeConversationId) || null;
+  // Build the active conversation — either a real one or the pending virtual one
+  const realConversation = conversations.find((c) => c.id === activeConversationId) || null;
+  const activeConversation = activeConversationId === PENDING_ID
+    ? (pendingChat?.virtualConv || null)
+    : realConversation;
 
+  // Expose all real conversations (for filtering by caller)
   return {
     conversations,
     activeConversation,
