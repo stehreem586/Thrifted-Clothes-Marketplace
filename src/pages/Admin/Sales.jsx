@@ -1,27 +1,138 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Star, ChevronLeft, ChevronRight, Flag, CheckCircle, Clock, MessageSquare } from 'lucide-react';
 import { useListings } from '../../context/ListingsContext';
+import { supabase } from '../../utils/supabaseClient';
+import { browseProducts } from '../../data/browseProducts';
 import './Sales.css';
 
+const DEFAULT_PRODUCT_IMAGE = 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400&q=80';
+
 export default function Sales() {
-  const { reviews, addSellerReviewReply, setReviews } = useListings();
+  const { reviews: contextReviews, listings, addSellerReviewReply, setReviews } = useListings();
+  const [dbReviews, setDbReviews] = useState([]);
   const [activeTab, setActiveTab] = useState('All');
   const [replyModalId, setReplyModalId] = useState(null);
   const [replyText, setReplyText] = useState('');
   const [removeConfirm, setRemoveConfirm] = useState(null);
 
-  // Filter tabs: All, Flagged (rating <= 2), Approved (replied or 5-star)
-  const filtered = reviews.filter(rv => {
+  // Fetch all reviews from Supabase for admin review moderation
+  useEffect(() => {
+    const fetchAllReviews = async () => {
+      try {
+        const { data: rawReviews } = await supabase
+          .from('reviews')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (!rawReviews) return;
+
+        const buyerIds = [...new Set(rawReviews.map(r => r.reviewer_id || r.buyer_id).filter(Boolean))];
+        const orderIds = [...new Set(rawReviews.map(r => r.order_id).filter(Boolean))];
+
+        let buyerMap = {};
+        if (buyerIds.length > 0) {
+          const { data: profiles } = await supabase.from('profiles').select('id, name, avatar_url').in('id', buyerIds);
+          (profiles || []).forEach(p => { buyerMap[p.id] = p; });
+        }
+
+        let orderMap = {};
+        if (orderIds.length > 0) {
+          const { data: orderData } = await supabase.from('orders').select('id, listing_id, listing_title, listing_image').in('id', orderIds);
+          (orderData || []).forEach(o => { orderMap[o.id] = o; });
+        }
+
+        const listingIds = [...new Set([
+          ...rawReviews.map(r => r.listing_id),
+          ...Object.values(orderMap).map(o => o.listing_id)
+        ].filter(Boolean))];
+
+        let listingMap = {};
+        if (listingIds.length > 0) {
+          const { data: lData } = await supabase.from('listings').select('id, title, image_url').in('id', listingIds);
+          (lData || []).forEach(l => { listingMap[l.id] = l; });
+        }
+
+        const mapped = rawReviews.map(r => {
+          const buyer = buyerMap[r.reviewer_id || r.buyer_id] || {};
+          const order = orderMap[r.order_id] || {};
+          const listingId = r.listing_id || order.listing_id;
+          const dbListing = listingMap[listingId] || {};
+          const localListing = (listings || []).find(l => String(l.id) === String(listingId)) ||
+                               browseProducts.find(p => String(p.id) === String(listingId));
+
+          const buyerName = buyer.name || r.buyer_name || 'Verified Buyer';
+          const buyerAvatar = buyer.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(buyerName)}&background=1a1a2e&color=fff&size=100`;
+
+          const listingTitle = dbListing.title || order.listing_title || r.listing_title || localListing?.title || 'Marketplace Item';
+          const listingImage = dbListing.image_url || order.listing_image || r.listing_image || r.listingImage || localListing?.image || localListing?.image_url || DEFAULT_PRODUCT_IMAGE;
+
+          return {
+            id: String(r.id),
+            listingId: listingId || dbListing.id || order.id,
+            customerName: buyerName,
+            customerAvatar: buyerAvatar,
+            listingImage,
+            listingTitle,
+            rating: parseInt(r.rating) || 5,
+            comment: r.comment || '',
+            date: r.created_at ? new Date(r.created_at).toISOString().split('T')[0] : 'Recent',
+            reply: r.reply_text ? { text: r.reply_text, date: r.reply_date || new Date().toISOString().split('T')[0] } : null
+          };
+        });
+
+        setDbReviews(mapped);
+      } catch (err) {
+        console.warn('Admin Sales reviews fetch warning:', err.message);
+      }
+    };
+
+    fetchAllReviews();
+  }, [listings]);
+
+  // Combine DB reviews with context reviews
+  const allReviews = useMemo(() => {
+    const map = new Map();
+    dbReviews.forEach(r => map.set(String(r.id), r));
+
+    (contextReviews || []).forEach(r => {
+      const custName = r.customerName || r.buyerName || 'Verified Buyer';
+      const custAvatar = r.customerAvatar || r.buyerAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(custName)}&background=1a1a2e&color=fff&size=100`;
+
+      const matchedListing = (listings || []).find(l => String(l.id) === String(r.listingId || r.listing_id)) ||
+                             browseProducts.find(p => String(p.id) === String(r.listingId || r.listing_id));
+
+      const prodTitle = r.listingTitle || r.title || matchedListing?.title || 'Marketplace Item';
+      const prodImg = r.listingImage || r.image_url || r.image || matchedListing?.image || matchedListing?.image_url || DEFAULT_PRODUCT_IMAGE;
+
+      map.set(String(r.id), {
+        id: String(r.id),
+        listingId: r.listingId,
+        customerName: custName,
+        customerAvatar: custAvatar,
+        listingImage: prodImg,
+        listingTitle: prodTitle,
+        rating: parseInt(r.rating) || 5,
+        comment: r.comment || '',
+        date: r.date || 'Recent',
+        reply: r.reply || null
+      });
+    });
+
+    return Array.from(map.values());
+  }, [dbReviews, contextReviews, listings]);
+
+  // Filter tabs: All, Flagged (rating <= 2), Approved (replied or >=4 star)
+  const filtered = allReviews.filter(rv => {
     if (activeTab === 'Flagged') return rv.rating <= 2;
     if (activeTab === 'Approved') return rv.rating >= 4 || rv.reply;
     if (activeTab === 'Pending') return !rv.reply;
     return true;
   });
 
-  const pendingCount  = reviews.filter(rv => !rv.reply).length;
-  const flaggedCount  = reviews.filter(rv => rv.rating <= 2).length;
-  const avgRating     = reviews.length > 0
-    ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
+  const pendingCount  = allReviews.filter(rv => !rv.reply).length;
+  const flaggedCount  = allReviews.filter(rv => rv.rating <= 2).length;
+  const avgRating     = allReviews.length > 0
+    ? (allReviews.reduce((s, r) => s + r.rating, 0) / allReviews.length).toFixed(1)
     : '—';
 
   const handleReplySubmit = (reviewId) => {
@@ -83,8 +194,8 @@ export default function Sales() {
       <div className="sales-stats">
         <div className="sales-stat-card">
           <p className="stat-lbl">TOTAL REVIEWS</p>
-          <p className="stat-num">{reviews.length}</p>
-          <div className="stat-bar"><div className="stat-bar-fill" style={{ width: `${Math.min(100, reviews.length * 20)}%` }}></div></div>
+          <p className="stat-num">{allReviews.length}</p>
+          <div className="stat-bar"><div className="stat-bar-fill" style={{ width: `${Math.min(100, allReviews.length * 20)}%` }}></div></div>
         </div>
         <div className="sales-stat-card">
           <p className="stat-lbl">FLAGGED REVIEWS</p>
@@ -169,9 +280,12 @@ export default function Sales() {
 
                 {/* Product + Actions */}
                 <div className="review-product-row">
-                  {rv.listingImage && (
-                    <img src={rv.listingImage} alt={rv.listingTitle} className="rev-product-img" />
-                  )}
+                  <img
+                    src={rv.listingImage || DEFAULT_PRODUCT_IMAGE}
+                    alt={rv.listingTitle}
+                    className="rev-product-img"
+                    onError={(e) => { e.target.src = DEFAULT_PRODUCT_IMAGE; }}
+                  />
                   <div style={{ flex: 1 }}>
                     <p className="rev-product-name">{rv.listingTitle || 'Listing'}</p>
                   </div>
@@ -202,7 +316,7 @@ export default function Sales() {
       {/* Pagination footer */}
       {filtered.length > 0 && (
         <div className="sales-pagination">
-          <p style={{ fontSize: '13px', color: '#64748b' }}>Showing {filtered.length} of {reviews.length} review(s)</p>
+          <p style={{ fontSize: '13px', color: '#64748b' }}>Showing {filtered.length} of {allReviews.length} review(s)</p>
         </div>
       )}
 

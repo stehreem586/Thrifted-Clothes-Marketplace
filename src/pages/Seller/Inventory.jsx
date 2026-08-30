@@ -158,10 +158,27 @@ function Inventory({ inventorySearch, onNavigateToProfile }) {
     return true;
   });
 
+  // Sort filtered listings based on sortBy selection (default: Newly Listed)
+  const sortedListings = [...filteredListings].sort((a, b) => {
+    if (sortBy === 'Price: Low to High') {
+      return (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0);
+    }
+    if (sortBy === 'Price: High to Low') {
+      return (parseFloat(b.price) || 0) - (parseFloat(a.price) || 0);
+    }
+    if (sortBy === 'Most Viewed') {
+      return (parseInt(b.views) || 0) - (parseInt(a.views) || 0);
+    }
+    // Default: 'Newly Listed' (newest date / created timestamp first)
+    const tA = a.createdAt ? new Date(a.createdAt).getTime() : (typeof a.id === 'number' ? a.id : 0);
+    const tB = b.createdAt ? new Date(b.createdAt).getTime() : (typeof b.id === 'number' ? b.id : 0);
+    return tB - tA;
+  });
+
   // Pagination Math (4 products per screen)
-  const totalPages = Math.max(1, Math.ceil(filteredListings.length / ITEMS_PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(sortedListings.length / ITEMS_PER_PAGE));
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedListings = filteredListings.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  const paginatedListings = sortedListings.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   const getSellerStatus = () => {
     try {
@@ -229,7 +246,7 @@ function Inventory({ inventorySearch, onNavigateToProfile }) {
           </div>
           <div className="sort-selector">
             <label>Sort by:</label>
-            <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="clean-select">
+            <select value={sortBy} onChange={e => { setSortBy(e.target.value); setCurrentPage(1); }} className="clean-select">
               <option>Newly Listed</option>
               <option>Price: Low to High</option>
               <option>Price: High to Low</option>
@@ -331,7 +348,7 @@ function Inventory({ inventorySearch, onNavigateToProfile }) {
           {/* Dynamic 4-Items-Per-Screen Pagination */}
           <div className="table-footer-pagination">
             <span className="showing-indicator">
-              Showing {filteredListings.length === 0 ? 0 : startIndex + 1}-{Math.min(startIndex + ITEMS_PER_PAGE, filteredListings.length)} of {filteredListings.length} listings
+              Showing {sortedListings.length === 0 ? 0 : startIndex + 1}-{Math.min(startIndex + ITEMS_PER_PAGE, sortedListings.length)} of {sortedListings.length} listings
             </span>
             <div className="pagination-controls">
               <button
