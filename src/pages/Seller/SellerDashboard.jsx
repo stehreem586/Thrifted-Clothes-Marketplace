@@ -1,13 +1,72 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useListings } from '../../context/ListingsContext';
 import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../utils/supabaseClient';
 import './SellerDashboard.css';
 
 function SellerDashboard({ dashboardSearch }) {
-  const { listings, orders } = useListings();
+  const { listings: localListings, orders: localOrders } = useListings();
   const { profile, user } = useAuth();
-  const [dateFilter, setDateFilter] = useState('All Time'); // 'Today' | 'Last 7 Days' | 'This Month' | 'All Time'
-  const [chartView, setChartView] = useState('Weekly'); // 'Weekly' | 'Monthly'
+  const [dateFilter, setDateFilter] = useState('All Time');
+  const [chartView, setChartView] = useState('Weekly');
+  const [realListings, setRealListings] = useState([]);
+  const [realOrders, setRealOrders] = useState([]);
+
+  // Fetch real listings and sold items from Supabase
+  useEffect(() => {
+    if (!user?.id) return;
+    const fetchReal = async () => {
+      try {
+        // All listings by this seller
+        const { data: lData } = await supabase
+          .from('listings')
+          .select('*')
+          .eq('seller_id', user.id);
+        
+        if (lData) {
+          const mapped = lData.map(item => ({
+            id: item.id,
+            title: item.title,
+            category: item.category || 'Other',
+            size: item.size || 'OS',
+            price: parseFloat(item.price) || 0,
+            status: item.status === 'sold' ? 'Sold'
+              : item.status === 'approved' || item.status === 'active' ? 'Approved'
+              : item.status === 'rejected' ? 'Rejected'
+              : item.status === 'draft' ? 'Draft'
+              : 'Pending',
+            views: item.views || 0,
+            likes: item.likes || 0,
+            condition: item.condition || 'Good',
+            description: item.description || '',
+            image: item.image_url || 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400&q=80',
+            createdAt: item.created_at || new Date().toISOString()
+          }));
+          setRealListings(mapped);
+
+          // Map sold items to realOrders
+          const soldListings = mapped.filter(item => item.status === 'Sold');
+          const mappedOrders = soldListings.map(item => ({
+            id: item.id,
+            title: item.title,
+            price: item.price,
+            image: item.image,
+            buyerName: 'Buyer',
+            date: item.createdAt,
+            status: 'Delivered',
+            details: item.category || 'Clothing'
+          }));
+          setRealOrders(mappedOrders);
+        }
+      } catch (e) {}
+    };
+    fetchReal();
+  }, [user?.id]);
+
+  // Merge real Supabase data with localStorage (Supabase wins)
+  const listings = realListings.length > 0 ? realListings : localListings;
+  const orders = realOrders.length > 0 ? realOrders : localOrders;
+
 
   // Resolve current seller verification status dynamically
   const getSellerStatus = () => {
@@ -100,17 +159,30 @@ function SellerDashboard({ dashboardSearch }) {
     };
   }, [filteredData, dateFilter]);
 
-  // Sales Over Time SVG Chart Data (Sales Count: 7 on Mon, 2 on Tue, etc.)
+  // Sales Over Time SVG Chart Data (Accurate Weekly & Monthly grouping)
   const chartData = useMemo(() => {
     if (chartView === 'Weekly') {
       const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
       const dayCounts = [0, 0, 0, 0, 0, 0, 0];
+
+      const now = new Date();
+      // Calculate Monday 00:00:00 of the current calendar week
+      const currentDayOfWeek = now.getDay(); // 0 = Sun, 1 = Mon, ...
+      const distanceToMon = currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1;
+      const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - distanceToMon, 0, 0, 0, 0);
+      const endOfWeek = new Date(startOfWeek.getTime() + 7 * 24 * 60 * 60 * 1000);
+
       orders.forEach(order => {
         if (!order.date) return;
         const d = new Date(order.date);
-        let dayIdx = d.getDay() - 1; // 0 = Mon
-        if (dayIdx < 0) dayIdx = 6; // Sun
-        dayCounts[dayIdx] += 1; // Sales count (e.g. 7 on Monday)
+        if (isNaN(d.getTime())) return;
+
+        // Only include orders that occurred in the current 7-day week period
+        if (d >= startOfWeek && d < endOfWeek) {
+          let dayIdx = d.getDay() - 1; // 0 = Mon
+          if (dayIdx < 0) dayIdx = 6; // Sun
+          dayCounts[dayIdx] += 1;
+        }
       });
 
       return { labels: days, values: dayCounts };
@@ -330,25 +402,26 @@ function SellerDashboard({ dashboardSearch }) {
           <div className="mock-chart">
             <svg viewBox="0 0 600 250" className="chart-svg">
               {/* Grid lines */}
-              <line x1="40" y1="200" x2="560" y2="200" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 4" />
-              <line x1="40" y1="150" x2="560" y2="150" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 4" />
-              <line x1="40" y1="100" x2="560" y2="100" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 4" />
-              <line x1="40" y1="50" x2="560" y2="50" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 4" />
+              <line x1="40" y1="200" x2="560" y2="200" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 4" className="chart-grid-line" />
+              <line x1="40" y1="150" x2="560" y2="150" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 4" className="chart-grid-line" />
+              <line x1="40" y1="100" x2="560" y2="100" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 4" className="chart-grid-line" />
+              <line x1="40" y1="50" x2="560" y2="50" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 4" className="chart-grid-line" />
 
               {/* Y Axis Labels */}
-              <text x="30" y="204" fontSize="10" fontWeight="600" fill="#94a3b8" textAnchor="end">0</text>
-              <text x="30" y="154" fontSize="10" fontWeight="600" fill="#94a3b8" textAnchor="end">{Math.round(svgCalculatedPoints.maxVal * 0.3)}</text>
-              <text x="30" y="104" fontSize="10" fontWeight="600" fill="#94a3b8" textAnchor="end">{Math.round(svgCalculatedPoints.maxVal * 0.6)}</text>
-              <text x="30" y="54" fontSize="10" fontWeight="600" fill="#94a3b8" textAnchor="end">{Math.round(svgCalculatedPoints.maxVal)}</text>
+              <text x="30" y="204" fontSize="10" fontWeight="600" fill="#94a3b8" textAnchor="end" className="chart-axis-text">0</text>
+              <text x="30" y="154" fontSize="10" fontWeight="600" fill="#94a3b8" textAnchor="end" className="chart-axis-text">{Math.round(svgCalculatedPoints.maxVal * 0.3)}</text>
+              <text x="30" y="104" fontSize="10" fontWeight="600" fill="#94a3b8" textAnchor="end" className="chart-axis-text">{Math.round(svgCalculatedPoints.maxVal * 0.6)}</text>
+              <text x="30" y="54" fontSize="10" fontWeight="600" fill="#94a3b8" textAnchor="end" className="chart-axis-text">{Math.round(svgCalculatedPoints.maxVal)}</text>
 
               {/* Dynamic Area Fill */}
-              <path d={svgCalculatedPoints.areaPath} fill="rgba(193, 147, 88, 0.08)" stroke="none" />
+              <path d={svgCalculatedPoints.areaPath} fill="rgba(193, 147, 88, 0.08)" stroke="none" className="chart-area-path" />
 
               {/* Dynamic Line Path */}
               <path
                 d={svgCalculatedPoints.linePath}
                 fill="none"
                 stroke="#111111"
+                className="chart-line-path"
                 strokeWidth="4"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -357,11 +430,11 @@ function SellerDashboard({ dashboardSearch }) {
               {/* Dynamic Dots and Values */}
               {svgCalculatedPoints.points.map((pt, i) => (
                 <g key={i}>
-                  <circle cx={pt.x} cy={pt.y} r="5" fill="#111111" stroke="#ffffff" strokeWidth="2" />
-                  <text x={pt.x} y={pt.y - 12} fontSize="10.5" fontWeight="700" fill="#111111" textAnchor="middle">
+                  <circle cx={pt.x} cy={pt.y} r="5" fill="#111111" stroke="#ffffff" strokeWidth="2" className="chart-dot" />
+                  <text x={pt.x} y={pt.y - 12} fontSize="10.5" fontWeight="700" fill="#111111" textAnchor="middle" className="chart-val-text">
                     {pt.val > 0 ? pt.val : '0'}
                   </text>
-                  <text x={pt.x} y="222" fontSize="12" fontWeight="600" fill="#64748b" textAnchor="middle">
+                  <text x={pt.x} y="222" fontSize="12" fontWeight="600" fill="#64748b" textAnchor="middle" className="chart-label-text">
                     {chartData.labels[i]}
                   </text>
                 </g>

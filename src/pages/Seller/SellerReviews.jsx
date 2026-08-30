@@ -2,7 +2,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useListings } from '../../context/ListingsContext';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../utils/supabaseClient';
+import { browseProducts } from '../../data/browseProducts';
 import './SellerReviews.css';
+
+const DEFAULT_PRODUCT_IMAGE = 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400&q=80';
 
 export default function SellerReviews() {
   const { reviews: contextReviews, listings, addSellerReviewReply } = useListings();
@@ -23,42 +26,97 @@ export default function SellerReviews() {
       }
       setLoading(true);
       try {
+        // Step 1: fetch reviews
         const { data: rawReviews, error } = await supabase
           .from('reviews')
-          .select('*, listings(id, title, image_url), profiles!reviews_buyer_id_fkey(id, name, avatar_url)')
+          .select('*')
           .eq('seller_id', user.id)
           .order('created_at', { ascending: false });
 
-        if (!error && rawReviews) {
-          const mapped = rawReviews.map(r => {
-            const listing = r.listings || {};
-            const buyer = r.profiles || {};
-            const buyerName = buyer.name || 'Verified Buyer';
-
-            return {
-              id: r.id ? String(r.id) : `db-rev-${Date.now()}`,
-              listingId: r.listing_id || listing.id,
-              customerName: buyerName,
-              customerAvatar: buyer.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(buyerName)}&background=1a1a2e&color=fff&size=100`,
-              listingImage: listing.image_url || 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400&q=80',
-              listingTitle: listing.title || 'Marketplace Item',
-              rating: parseInt(r.rating) || 5,
-              comment: r.comment || 'Great quality thrift item, fast delivery!',
-              date: r.created_at ? new Date(r.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-              reply: r.reply_text ? { text: r.reply_text, date: r.reply_date || new Date().toISOString().split('T')[0] } : null
-            };
-          });
-          setDbReviews(mapped);
+        if (error || !rawReviews) {
+          setLoading(false);
+          return;
         }
+
+        // Step 2: collect unique buyer IDs and order IDs
+        const buyerIds = [...new Set(rawReviews.map(r => r.reviewer_id || r.buyer_id).filter(Boolean))];
+        const orderIds = [...new Set(rawReviews.map(r => r.order_id).filter(Boolean))];
+
+        // Step 3: fetch buyer profiles
+        let buyerMap = {};
+        if (buyerIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, name, avatar_url')
+            .in('id', buyerIds);
+          (profiles || []).forEach(p => { buyerMap[p.id] = p; });
+        }
+
+        // Step 4: fetch orders to get listing details
+        let orderMap = {};
+        if (orderIds.length > 0) {
+          const { data: orderData } = await supabase
+            .from('orders')
+            .select('id, listing_id, listing_title, listing_image')
+            .in('id', orderIds);
+          (orderData || []).forEach(o => { orderMap[o.id] = o; });
+        }
+
+        // Step 5: collect all listing IDs
+        const listingIds = [...new Set([
+          ...rawReviews.map(r => r.listing_id),
+          ...Object.values(orderMap).map(o => o.listing_id)
+        ].filter(Boolean))];
+
+        // Step 6: fetch listing images directly from listings table
+        let listingMap = {};
+        if (listingIds.length > 0) {
+          const { data: listingData } = await supabase
+            .from('listings')
+            .select('id, title, image_url')
+            .in('id', listingIds);
+          (listingData || []).forEach(l => { listingMap[l.id] = l; });
+        }
+
+        // Step 7: map everything together
+        const mapped = rawReviews.map(r => {
+          const buyer = buyerMap[r.reviewer_id || r.buyer_id] || {};
+          const order = orderMap[r.order_id] || {};
+          const listingId = r.listing_id || order.listing_id;
+          const dbListing = listingMap[listingId] || {};
+          const localListing = (listings || []).find(l => String(l.id) === String(listingId)) ||
+                               browseProducts.find(p => String(p.id) === String(listingId));
+
+          const buyerName = buyer.name || r.buyer_name || 'Verified Buyer';
+          const buyerAvatar = buyer.avatar_url
+            || `https://ui-avatars.com/api/?name=${encodeURIComponent(buyerName)}&background=1a1a2e&color=fff&size=100`;
+
+          const listingTitle = dbListing.title || order.listing_title || r.listing_title || localListing?.title || 'Marketplace Item';
+          const listingImage = dbListing.image_url || order.listing_image || r.listing_image || r.listingImage || localListing?.image || localListing?.image_url || DEFAULT_PRODUCT_IMAGE;
+
+          return {
+            id: r.id ? String(r.id) : `db-rev-${Date.now()}`,
+            listingId: listingId || dbListing.id || order.id,
+            customerName: buyerName,
+            customerAvatar: buyerAvatar,
+            listingImage,
+            listingTitle,
+            rating: parseInt(r.rating) || 5,
+            comment: r.comment || '',
+            date: r.created_at ? new Date(r.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            reply: r.reply_text ? { text: r.reply_text, date: r.reply_date || new Date().toISOString().split('T')[0] } : null
+          };
+        });
+        setDbReviews(mapped);
       } catch (err) {
-        console.warn('SellerReviews fetch notice:', err.message);
+        console.warn('SellerReviews fetch error:', err.message);
       } finally {
         setLoading(false);
       }
     };
 
     fetchReviews();
-  }, [user]);
+  }, [user, listings]);
 
   // Merge Supabase reviews with context reviews
   const allReviews = useMemo(() => {
@@ -68,8 +126,12 @@ export default function SellerReviews() {
     (contextReviews || []).forEach(r => {
       const custName = r.customerName || r.buyerName || 'Verified Buyer';
       const custAvatar = r.customerAvatar || r.buyerAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(custName)}&background=1a1a2e&color=fff&size=100`;
-      const prodImg = r.listingImage || r.image_url || r.image || 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400&q=80';
-      const prodTitle = r.listingTitle || r.title || 'Marketplace Item';
+      
+      const matchedListing = (listings || []).find(l => String(l.id) === String(r.listingId || r.listing_id)) ||
+                             browseProducts.find(p => String(p.id) === String(r.listingId || r.listing_id));
+
+      const prodTitle = r.listingTitle || r.title || matchedListing?.title || 'Marketplace Item';
+      const prodImg = r.listingImage || r.image_url || r.image || matchedListing?.image || matchedListing?.image_url || DEFAULT_PRODUCT_IMAGE;
 
       map.set(String(r.id), {
         id: String(r.id),
@@ -86,7 +148,7 @@ export default function SellerReviews() {
     });
 
     return Array.from(map.values());
-  }, [dbReviews, contextReviews]);
+  }, [dbReviews, contextReviews, listings]);
 
   // Listing filter logic
   const filteredReviews = useMemo(() => {
@@ -249,8 +311,13 @@ export default function SellerReviews() {
 
               {/* Product Reference Badge */}
               <div className="review-product-badge">
-                <img src={rev.listingImage} alt={rev.listingTitle} className="rev-prod-thumb" />
-                <span className="rev-prod-title">Item: {rev.listingTitle}</span>
+                <img
+                  src={rev.listingImage || DEFAULT_PRODUCT_IMAGE}
+                  alt={rev.listingTitle}
+                  className="rev-prod-thumb"
+                  onError={(e) => { e.target.src = DEFAULT_PRODUCT_IMAGE; }}
+                />
+                <span className="rev-prod-title">📦 {rev.listingTitle}</span>
               </div>
 
               {/* Customer Comment */}

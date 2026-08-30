@@ -77,9 +77,11 @@ function SellerPublicProfile() {
   const [profileData, setProfileData] = useState(null);
   const [stats, setStats] = useState({ rating: 0, reviewsCount: 0, salesCount: 0 });
   const [activeListings, setActiveListings] = useState([]);
+  const [publicReviews, setPublicReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showOwnStoreModal, setShowOwnStoreModal] = useState(false);
 
   useEffect(() => {
     const loadProfileData = async () => {
@@ -101,20 +103,71 @@ function SellerPublicProfile() {
             return;
           }
 
+          // Fetch reviews with buyer profiles
           const { data: reviews, error: reviewsError } = await supabase
             .from('reviews')
-            .select('rating')
-            .eq('seller_id', sellerId);
+            .select('*')
+            .eq('seller_id', sellerId)
+            .order('created_at', { ascending: false });
 
           let avgR = 0;
           let revCount = 0;
-          if (!reviewsError && reviews) {
+          let mappedReviews = [];
+
+          if (!reviewsError && reviews && reviews.length > 0) {
             revCount = reviews.length;
-            if (revCount > 0) {
-              const sum = reviews.reduce((acc, curr) => acc + (curr.rating || 0), 0);
-              avgR = (sum / revCount).toFixed(1);
+            const sum = reviews.reduce((acc, curr) => acc + (curr.rating || 0), 0);
+            avgR = (sum / revCount).toFixed(1);
+
+            // Only map first 10 for UI rendering
+            const displayReviews = reviews.slice(0, 10);
+
+            // Fetch buyer profiles for real avatars
+            const buyerIds = [...new Set(displayReviews.map(r => r.reviewer_id || r.buyer_id).filter(Boolean))];
+            const orderIds = [...new Set(displayReviews.map(r => r.order_id).filter(Boolean))];
+
+            let buyerMap = {};
+            if (buyerIds.length > 0) {
+              const { data: bProfiles } = await supabase.from('profiles').select('id, name, avatar_url').in('id', buyerIds);
+              (bProfiles || []).forEach(p => { buyerMap[p.id] = p; });
             }
+
+            let orderMap = {};
+            if (orderIds.length > 0) {
+              const { data: oData } = await supabase.from('orders').select('id, listing_id, listing_title, listing_image').in('id', orderIds);
+              (oData || []).forEach(o => { orderMap[o.id] = o; });
+            }
+
+            const listingIds = [...new Set([
+              ...displayReviews.map(r => r.listing_id),
+              ...Object.values(orderMap).map(o => o.listing_id)
+            ].filter(Boolean))];
+
+            let listingMap = {};
+            if (listingIds.length > 0) {
+              const { data: lData } = await supabase.from('listings').select('id, title, image_url').in('id', listingIds);
+              (lData || []).forEach(l => { listingMap[l.id] = l; });
+            }
+
+            mappedReviews = displayReviews.map(r => {
+              const buyer = buyerMap[r.reviewer_id || r.buyer_id] || {};
+              const order = orderMap[r.order_id] || {};
+              const listingId = r.listing_id || order.listing_id;
+              const listing = listingMap[listingId] || {};
+              const bName = buyer.name || 'Verified Buyer';
+              return {
+                id: r.id,
+                rating: parseInt(r.rating) || 5,
+                comment: r.comment || '',
+                date: r.created_at ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
+                buyerName: bName,
+                buyerAvatar: buyer.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(bName)}&background=1a1a2e&color=fff&size=100`,
+                listingTitle: listing.title || order.listing_title || 'Marketplace Item',
+                listingImage: listing.image_url || order.listing_image || 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400&q=80',
+              };
+            });
           }
+          setPublicReviews(mappedReviews);
 
           const { count: salesCount, error: salesError } = await supabase
             .from('listings')
@@ -176,8 +229,8 @@ function SellerPublicProfile() {
       setShowLoginModal(true);
       return;
     }
-    if (user.id === profileData.id) {
-      alert("This is your own store profile.");
+    if (user.id === profileData?.id) {
+      setShowOwnStoreModal(true);
       return;
     }
     navigate(`/chat?sellerId=${profileData.id}&name=${encodeURIComponent(profileData.name)}&avatar=${encodeURIComponent(profileData.avatar_url || '')}`);
@@ -212,6 +265,23 @@ function SellerPublicProfile() {
             <div className="modal-buttons">
               <button className="secondary-btn" onClick={() => setShowLoginModal(false)}>Cancel</button>
               <button className="primary-btn" onClick={() => navigate('/login')}>Log In</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Own Store Modal */}
+      {showOwnStoreModal && (
+        <div className="login-modal-backdrop" onClick={() => setShowOwnStoreModal(false)}>
+          <div className="login-modal-content" onClick={e => e.stopPropagation()} style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '48px', marginBottom: '12px' }}>🏪</div>
+            <h3 style={{ margin: '0 0 8px', fontSize: '20px', fontWeight: '700', color: '#1e293b' }}>This is Your Store</h3>
+            <p style={{ margin: '0 0 20px', fontSize: '14px', color: '#64748b', lineHeight: '1.6' }}>
+              You are viewing your own seller storefront. Manage your listings and profile from the Seller Dashboard.
+            </p>
+            <div className="modal-buttons">
+              <button className="secondary-btn" onClick={() => setShowOwnStoreModal(false)}>Close</button>
+              <button className="primary-btn" onClick={() => navigate('/seller')}>Go to Dashboard</button>
             </div>
           </div>
         </div>
@@ -306,6 +376,54 @@ function SellerPublicProfile() {
           </div>
         )}
       </div>
+
+      {/* Reviews Section */}
+      {publicReviews.length > 0 && (
+        <div className="profile-listings-section" style={{ marginTop: '32px' }}>
+          <h2>Customer Reviews ({publicReviews.length})</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
+            {publicReviews.map(rev => (
+              <div key={rev.id} style={{
+                background: '#fff',
+                borderRadius: '14px',
+                border: '1px solid #e2e8f0',
+                padding: '20px',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.04)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                  <img
+                    src={rev.buyerAvatar}
+                    alt={rev.buyerName}
+                    style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #e2e8f0', flexShrink: 0 }}
+                    onError={e => { e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(rev.buyerName)}&background=1a1a2e&color=fff&size=100`; }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: '700', fontSize: '15px', color: '#1e293b' }}>{rev.buyerName}</div>
+                    <div style={{ fontSize: '12px', color: '#94a3b8' }}>{rev.date}</div>
+                  </div>
+                  <div style={{ color: '#f59e0b', fontSize: '16px', letterSpacing: '2px' }}>
+                    {'★'.repeat(Math.min(5, rev.rating))}{'☆'.repeat(Math.max(0, 5 - rev.rating))}
+                  </div>
+                </div>
+                {rev.listingTitle && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f8fafc', borderRadius: '8px', padding: '8px 12px', marginBottom: '10px' }}>
+                    {rev.listingImage && (
+                      <img src={rev.listingImage} alt={rev.listingTitle}
+                        style={{ width: '36px', height: '36px', borderRadius: '6px', objectFit: 'cover' }}
+                        onError={e => { e.target.style.display = 'none'; }}
+                      />
+                    )}
+                    <span style={{ fontSize: '13px', color: '#475569', fontWeight: '500' }}>📦 {rev.listingTitle}</span>
+                  </div>
+                )}
+                {rev.comment && (
+                  <p style={{ margin: 0, fontSize: '14px', color: '#334155', lineHeight: '1.6', fontStyle: 'italic' }}>"{rev.comment}"</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

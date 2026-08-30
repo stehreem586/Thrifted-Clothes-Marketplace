@@ -35,6 +35,7 @@ const Product = () => {
   const [buyerMsgInput, setBuyerMsgInput] = useState('');
 
   const [toastMessage, setToastMessage] = useState('');
+  const [showOwnListingModal, setShowOwnListingModal] = useState(false);
 
   // Seller phone-reveal state (origin/main addition)
   const [sellerProfile, setSellerProfile] = useState(null);
@@ -329,6 +330,7 @@ const Product = () => {
           id: 'rev-' + Date.now(),
           listingId: cleanId,
           listingTitle: currentProduct.title,
+          listingImage: currentProduct.image || currentProduct.image_url || (Array.isArray(currentProduct.images) ? currentProduct.images[0] : null) || 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400&q=80',
           rating: selectedRating,
           comment: reviewComment,
           date: new Date().toISOString().split('T')[0],
@@ -427,12 +429,9 @@ const Product = () => {
     }
 
     const sellerId = currentProduct?.seller?.id || currentProduct?.seller_id;
-    if (!sellerId) {
-      alert("Seller information is not available for this listing.");
-      return;
-    }
+    if (!sellerId) return;
     if (user.id === sellerId) {
-      alert("This is your own product listing.");
+      setShowOwnListingModal(true);
       return;
     }
 
@@ -445,6 +444,11 @@ const Product = () => {
   };
 
   const handleBuyNow = () => {
+    const sellerId = currentProduct?.seller?.id || currentProduct?.seller_id;
+    if (user && sellerId && user.id === sellerId) {
+      setShowOwnListingModal(true);
+      return;
+    }
     showToast('Secure checkout simulated! Item added to bag.');
   };
 
@@ -957,6 +961,21 @@ const Product = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {showOwnListingModal && (
+        <div className="login-modal-backdrop" onClick={() => setShowOwnListingModal(false)}>
+          <div className="login-modal-content" onClick={e => e.stopPropagation()} style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '48px', marginBottom: '12px' }}>🧥</div>
+            <h3 style={{ margin: '0 0 8px', fontSize: '20px', fontWeight: '700', color: '#1e293b' }}>This is Your Listing</h3>
+            <p style={{ margin: '0 0 20px', fontSize: '14px', color: '#64748b', lineHeight: '1.6' }}>
+              You cannot purchase or initiate a buyer chat on your own product listing. You can manage or edit this item from the Seller Hub.
+            </p>
+            <div className="modal-buttons">
+              <button className="secondary-btn" onClick={() => setShowOwnListingModal(false)}>Close</button>
+              <button className="primary-btn" onClick={() => navigate('/seller')}>Go to Seller Hub</button>
+            </div>
           </div>
         </div>
       )}
